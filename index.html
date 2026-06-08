@@ -2,474 +2,315 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>FITS — AI Wardrobe Stylist</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0f0e0c;
-    --surface: #1a1916;
-    --surface2: #242220;
-    --border: #2e2c29;
-    --accent: #e8c97e;
-    --accent2: #c97e4e;
-    --text: #f0ede8;
-    --text-muted: #8a8780;
-    --danger: #c0392b;
-    --success: #6aa97a;
-    --radius: 16px;
-    --radius-sm: 10px;
-  }
+:root {
+  --bg: #0f0e0c;
+  --surface: #1a1916;
+  --surface2: #242220;
+  --border: #2e2c29;
+  --accent: #e8c97e;
+  --accent2: #c97e4e;
+  --text: #f0ede8;
+  --text-muted: #8a8780;
+  --danger: #c0392b;
+  --success: #6aa97a;
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  overflow-x: hidden;
+  position: relative;
+}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+/* ── TOPBAR ── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 20px 12px;
+  position: sticky; top: 0; z-index: 100;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.logo { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 900; letter-spacing: 2px; color: var(--accent); }
+.logo span { color: var(--text-muted); font-weight: 400; font-size: 11px; letter-spacing: 3px; display: block; margin-top: -4px; }
+.api-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-muted); font-size: 12px; padding: 6px 12px;
+  border-radius: 20px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s;
+}
+.api-btn:hover { border-color: var(--accent); color: var(--accent); }
+.api-btn.connected { border-color: var(--success); color: var(--success); }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    min-height: 100dvh;
-    max-width: 480px;
-    margin: 0 auto;
-    position: relative;
-    overflow-x: hidden;
-  }
+/* ── NAV ── */
+.nav {
+  display: flex; padding: 12px 20px 0; gap: 4px;
+  border-bottom: 1px solid var(--border); background: var(--bg);
+  position: sticky; top: 69px; z-index: 99;
+}
+.nav-tab {
+  flex: 1; text-align: center; padding: 10px 4px;
+  font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--text-muted); cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all .2s;
+}
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-  /* TOP BAR */
-  .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 20px 12px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
-  }
-  .logo {
-    font-family: 'Playfair Display', serif;
-    font-size: 26px;
-    font-weight: 900;
-    letter-spacing: 2px;
-    color: var(--accent);
-  }
-  .logo span { color: var(--text-muted); font-weight: 400; font-size: 12px; letter-spacing: 3px; display: block; margin-top: -4px; }
+/* ── PAGES ── */
+.page { display: none; padding: 20px; padding-bottom: 40px; }
+.page.active { display: block; }
 
-  .api-btn {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    font-size: 12px;
-    padding: 6px 12px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    transition: all 0.2s;
-  }
-  .api-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .api-btn.connected { border-color: var(--success); color: var(--success); }
+/* ── UPLOAD ── */
+.upload-zone {
+  border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 28px 20px; text-align: center; cursor: pointer;
+  transition: all .3s; background: var(--surface); position: relative; overflow: hidden;
+}
+.upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); background: #1e1c18; }
+.upload-zone input { display: none; }
+.upload-icon { font-size: 36px; margin-bottom: 10px; }
+.upload-zone h3 { font-family: 'Playfair Display', serif; font-size: 17px; margin-bottom: 5px; }
+.upload-zone p { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+.upload-hint {
+  display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap;
+}
+.upload-hint span {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 4px 10px; font-size: 11px; color: var(--text-muted);
+}
 
-  /* NAV TABS */
-  .nav {
-    display: flex;
-    padding: 12px 20px 0;
-    gap: 4px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg);
-  }
-  .nav-tab {
-    flex: 1;
-    text-align: center;
-    padding: 10px 4px;
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s;
-  }
-  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+/* ── SECTION HEADER ── */
+.section-header { display: flex; align-items: center; justify-content: space-between; margin: 22px 0 12px; }
+.section-title { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 700; }
+.section-count { background: var(--surface2); color: var(--text-muted); font-size: 11px; padding: 3px 10px; border-radius: 20px; }
 
-  /* PAGE SECTIONS */
-  .page { display: none; padding: 20px; padding-bottom: 80px; }
-  .page.active { display: block; }
+/* ── FILTER ROW ── */
+.filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; margin-bottom: 14px; }
+.filter-row::-webkit-scrollbar { display: none; }
+.filter-chip {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+  padding: 6px 14px; font-size: 12px; white-space: nowrap; cursor: pointer;
+  transition: all .2s; color: var(--text-muted); font-family: 'DM Sans', sans-serif;
+}
+.filter-chip.active { background: var(--accent); color: #0f0e0c; border-color: var(--accent); font-weight: 600; }
 
-  /* UPLOAD AREA */
-  .upload-zone {
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 32px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s;
-    background: var(--surface);
-    position: relative;
-    overflow: hidden;
-  }
-  .upload-zone:hover, .upload-zone.drag-over {
-    border-color: var(--accent);
-    background: #1e1c18;
-  }
-  .upload-zone input { display: none; }
-  .upload-icon { font-size: 40px; margin-bottom: 12px; }
-  .upload-zone h3 { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--text); margin-bottom: 6px; }
-  .upload-zone p { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+/* ── WARDROBE GRID ── */
+.wardrobe-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.item-card {
+  background: var(--surface); border-radius: var(--radius-sm); overflow: hidden;
+  position: relative; aspect-ratio: 3/4; cursor: pointer;
+  border: 1px solid var(--border); transition: all .2s;
+  animation: fadeIn .3s ease;
+}
+.item-card:active { transform: scale(0.97); }
+.item-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.item-card .item-tag {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.85));
+  padding: 20px 7px 7px; font-size: 10px; color: #fff;
+  text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.3;
+}
+.item-card .item-tag .tag-cat { font-size: 9px; color: var(--accent); font-weight: 600; }
+.remove-btn {
+  position: absolute; top: 6px; right: 6px;
+  background: rgba(0,0,0,0.75); color: #fff;
+  border: none; border-radius: 50%; width: 26px; height: 26px;
+  font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s;
+}
+.item-card:hover .remove-btn, .item-card:focus-within .remove-btn { opacity: 1; }
+.edit-btn {
+  position: absolute; top: 6px; left: 6px;
+  background: rgba(232,201,126,0.9); color: #0f0e0c;
+  border: none; border-radius: 50%; width: 26px; height: 26px;
+  font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s;
+}
+.item-card:hover .edit-btn, .item-card:focus-within .edit-btn { opacity: 1; }
+.analyzing-badge {
+  position: absolute; top: 6px; left: 6px;
+  background: var(--accent); color: #0f0e0c;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 3px 7px; border-radius: 4px; text-transform: uppercase;
+  animation: pulse 1.2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
-  /* SECTION HEADERS */
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin: 24px 0 14px;
-  }
-  .section-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 20px;
-    font-weight: 700;
-  }
-  .section-count {
-    background: var(--surface2);
-    color: var(--text-muted);
-    font-size: 11px;
-    padding: 3px 10px;
-    border-radius: 20px;
-  }
+/* ── EMPTY STATE ── */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+.empty-state .icon { font-size: 44px; margin-bottom: 14px; }
+.empty-state h3 { font-family: 'Playfair Display', serif; font-size: 17px; color: var(--text); margin-bottom: 8px; }
+.empty-state p { font-size: 13px; line-height: 1.6; }
 
-  /* WARDROBE GRID */
-  .wardrobe-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-  }
-  .item-card {
-    background: var(--surface);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    position: relative;
-    aspect-ratio: 3/4;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    transition: all 0.2s;
-  }
-  .item-card:hover { border-color: var(--accent); transform: scale(1.02); }
-  .item-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .item-card .item-tag {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(transparent, rgba(0,0,0,0.8));
-    padding: 20px 8px 8px;
-    font-size: 10px;
-    color: #fff;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .item-card .remove-btn {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    background: rgba(0,0,0,0.7);
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-  .item-card:hover .remove-btn { opacity: 1; }
+/* ── OCCASION GRID ── */
+.occasion-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
+.occasion-btn {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 8px; text-align: center;
+  cursor: pointer; transition: all .2s; font-family: 'DM Sans', sans-serif;
+  position: relative;
+}
+.occasion-btn:active { transform: scale(0.97); }
+.occasion-btn.selected { border-color: var(--accent); background: #1e1c18; }
+.occ-icon { font-size: 24px; margin-bottom: 5px; }
+.occ-label { font-size: 12px; font-weight: 500; color: var(--text); }
+.occasion-btn .del-occ {
+  position: absolute; top: 4px; right: 4px;
+  background: none; border: none; color: var(--text-muted);
+  font-size: 13px; cursor: pointer; line-height: 1; padding: 2px;
+  opacity: 0; transition: opacity .2s;
+}
+.occasion-btn:hover .del-occ { opacity: 1; }
+.add-occasion-btn {
+  background: var(--surface); border: 1px dashed var(--border);
+  border-radius: var(--radius-sm); padding: 12px 8px; text-align: center;
+  cursor: pointer; transition: all .2s; color: var(--text-muted); font-size: 12px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+}
+.add-occasion-btn:hover { border-color: var(--accent); color: var(--accent); }
+.add-occasion-btn .plus { font-size: 22px; }
 
-  /* EMPTY STATE */
-  .empty-state {
-    text-align: center;
-    padding: 48px 20px;
-    color: var(--text-muted);
-  }
-  .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
-  .empty-state h3 { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--text); margin-bottom: 8px; }
-  .empty-state p { font-size: 13px; line-height: 1.6; }
+/* ── CHIPS ── */
+.input-group { margin: 16px 0; }
+.input-label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; display: block; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+  padding: 7px 14px; font-size: 13px; cursor: pointer; transition: all .2s;
+  color: var(--text-muted); font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 5px;
+}
+.chip:hover { border-color: var(--accent); color: var(--text); }
+.chip.selected { border-color: var(--accent); color: var(--accent); background: #1e1c18; }
+.chip .del-chip { font-size: 12px; color: var(--text-muted); cursor: pointer; margin-left: 3px; }
+.chip .del-chip:hover { color: var(--danger); }
+.add-chip-btn {
+  background: none; border: 1px dashed var(--border); border-radius: 20px;
+  padding: 7px 14px; font-size: 12px; cursor: pointer;
+  color: var(--text-muted); font-family: 'DM Sans', sans-serif; transition: all .2s;
+}
+.add-chip-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-  /* SUGGEST PAGE */
-  .occasion-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin: 16px 0;
-  }
-  .occasion-btn {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 16px 12px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: 'DM Sans', sans-serif;
-  }
-  .occasion-btn:hover { border-color: var(--accent); }
-  .occasion-btn.selected { border-color: var(--accent); background: #1e1c18; }
-  .occasion-btn .occ-icon { font-size: 28px; margin-bottom: 8px; }
-  .occasion-btn .occ-label { font-size: 13px; font-weight: 500; color: var(--text); }
-  .occasion-btn .occ-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+/* ── NOTES ── */
+.notes-input {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 16px; color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 14px; resize: none; height: 80px;
+  outline: none; transition: border-color .2s; margin-top: 8px;
+}
+.notes-input:focus { border-color: var(--accent); }
+.notes-input::placeholder { color: var(--text-muted); }
 
-  /* WEATHER / STYLE INPUTS */
-  .input-group { margin: 16px 0; }
-  .input-label { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; display: block; }
-  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 7px 14px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: var(--text-muted);
-    font-family: 'DM Sans', sans-serif;
-  }
-  .chip:hover { border-color: var(--accent); color: var(--text); }
-  .chip.selected { border-color: var(--accent); color: var(--accent); background: #1e1c18; }
+/* ── GENERATE BTN ── */
+.generate-btn {
+  width: 100%; background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none; border-radius: var(--radius); padding: 18px;
+  color: #0f0e0c; font-family: 'Playfair Display', serif;
+  font-size: 18px; font-weight: 700; letter-spacing: 1px;
+  cursor: pointer; margin-top: 20px; transition: all .3s;
+}
+.generate-btn:active { transform: scale(0.98); }
+.generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .notes-input {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px 16px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    resize: none;
-    height: 80px;
-    outline: none;
-    transition: border-color 0.2s;
-    margin-top: 8px;
-  }
-  .notes-input:focus { border-color: var(--accent); }
-  .notes-input::placeholder { color: var(--text-muted); }
+/* ── LOADING ── */
+.loading-bar { height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; margin: 14px 0; display: none; }
+.loading-bar.visible { display: block; }
+.loading-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); animation: loadpulse 2s infinite; border-radius: 2px; }
+@keyframes loadpulse { 0%{width:0%;opacity:1} 50%{width:80%;opacity:.8} 100%{width:100%;opacity:0} }
 
-  /* GENERATE BUTTON */
-  .generate-btn {
-    width: 100%;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border: none;
-    border-radius: var(--radius);
-    padding: 18px;
-    color: #0f0e0c;
-    font-family: 'Playfair Display', serif;
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    cursor: pointer;
-    margin-top: 24px;
-    transition: all 0.3s;
-    position: relative;
-    overflow: hidden;
-  }
-  .generate-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(232,201,126,0.3); }
-  .generate-btn:active { transform: translateY(0); }
-  .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+/* ── RESULT ── */
+.result-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-top: 20px; display: none; }
+.result-box.visible { display: block; }
+.result-header { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--accent); margin-bottom: 14px; }
+.result-content { font-size: 14px; line-height: 1.8; color: var(--text); white-space: pre-wrap; }
 
-  /* RESULT AREA */
-  .result-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-top: 20px;
-    display: none;
-  }
-  .result-box.visible { display: block; }
-  .result-header {
-    font-family: 'Playfair Display', serif;
-    font-size: 18px;
-    color: var(--accent);
-    margin-bottom: 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .result-content {
-    font-size: 14px;
-    line-height: 1.8;
-    color: var(--text);
-    white-space: pre-wrap;
-  }
-  .result-content strong { color: var(--accent); }
+/* ── MODALS ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+  z-index: 200; display: none; align-items: flex-end; justify-content: center;
+  padding: 0;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 28px 24px 36px; width: 100%; max-width: 480px;
+  animation: slideUp .3s ease;
+}
+@keyframes slideUp { from{transform:translateY(40px);opacity:0} to{transform:translateY(0);opacity:1} }
+.modal h2 { font-family: 'Playfair Display', serif; font-size: 21px; margin-bottom: 7px; }
+.modal p { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 18px; }
+.modal-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 16px; color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; margin-bottom: 14px; transition: border-color .2s;
+}
+.modal-input:focus { border-color: var(--accent); }
+.modal-link { font-size: 12px; color: var(--accent); text-decoration: none; display: block; margin-bottom: 20px; }
+.btn-row { display: flex; gap: 10px; }
+.btn-cancel {
+  flex: 1; background: none; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 13px; color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s;
+}
+.btn-cancel:hover { border-color: var(--text-muted); color: var(--text); }
+.btn-save {
+  flex: 2; background: var(--accent); border: none; border-radius: var(--radius-sm);
+  padding: 13px; color: #0f0e0c; font-family: 'DM Sans', sans-serif;
+  font-weight: 600; cursor: pointer; transition: all .2s; font-size: 15px;
+}
+.btn-save:hover { background: #f0d48a; }
 
-  /* LOADING */
-  .loading-bar {
-    height: 2px;
-    background: var(--border);
-    border-radius: 2px;
-    overflow: hidden;
-    margin: 16px 0;
-    display: none;
-  }
-  .loading-bar.visible { display: block; }
-  .loading-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    width: 0%;
-    animation: loadpulse 2s infinite;
-    border-radius: 2px;
-  }
-  @keyframes loadpulse {
-    0% { width: 0%; opacity: 1; }
-    50% { width: 80%; opacity: 0.8; }
-    100% { width: 100%; opacity: 0; }
-  }
+/* ── ITEM EDIT MODAL ── */
+.edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+.edit-option {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px; text-align: center;
+  cursor: pointer; font-size: 12px; transition: all .2s; color: var(--text-muted);
+}
+.edit-option.selected { border-color: var(--accent); color: var(--accent); background: #1e1c18; }
+.edit-label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin: 14px 0 8px; display: block; }
+.tag-input-row { display: flex; gap: 8px; }
+.tag-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; }
+.tag-input:focus { border-color: var(--accent); }
+.tag-add-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--accent); cursor: pointer; font-size: 18px; transition: all .2s; }
+.tag-add-btn:hover { background: #1e1c18; }
+.tags-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tag-pill {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 20px;
+  padding: 4px 10px; font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 5px;
+}
+.tag-pill button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 13px; padding: 0; line-height: 1; }
+.tag-pill button:hover { color: var(--danger); }
 
-  /* MODAL */
-  .modal-overlay {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.85);
-    z-index: 200;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 28px;
-    width: 100%;
-    max-width: 400px;
-  }
-  .modal h2 { font-family: 'Playfair Display', serif; font-size: 22px; margin-bottom: 8px; }
-  .modal p { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; }
-  .modal input {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px 16px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    outline: none;
-    margin-bottom: 16px;
-    transition: border-color 0.2s;
-  }
-  .modal input:focus { border-color: var(--accent); }
-  .modal-link { font-size: 12px; color: var(--accent); text-decoration: none; display: block; margin-top: -8px; margin-bottom: 20px; }
-  .btn-row { display: flex; gap: 10px; }
-  .btn-cancel {
-    flex: 1;
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px;
-    color: var(--text-muted);
-    font-family: 'DM Sans', sans-serif;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-cancel:hover { border-color: var(--text-muted); color: var(--text); }
-  .btn-save {
-    flex: 2;
-    background: var(--accent);
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: 12px;
-    color: #0f0e0c;
-    font-family: 'DM Sans', sans-serif;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-save:hover { background: #f0d48a; }
+.preview-img { width: 100%; height: 160px; object-fit: cover; border-radius: var(--radius-sm); margin-bottom: 16px; }
 
-  /* TOAST */
-  .toast {
-    position: fixed;
-    bottom: 90px;
-    left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 10px 20px;
-    font-size: 13px;
-    color: var(--text);
-    opacity: 0;
-    transition: all 0.3s;
-    z-index: 300;
-    white-space: nowrap;
-  }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 24px;
+  padding: 10px 20px; font-size: 13px; color: var(--text); opacity: 0;
+  transition: all .3s; z-index: 300; white-space: nowrap; max-width: 90%;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+/* ── ANIM ── */
+@keyframes fadeIn { from{opacity:0;transform:scale(.95)} to{opacity:1;transform:scale(1)} }
 
-  /* PULSE ANIMATION for adding items */
-  @keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-  }
-  .item-card { animation: fadeIn 0.3s ease; }
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-  /* Category filter */
-  .filter-row {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    scrollbar-width: none;
-    margin-bottom: 16px;
-  }
-  .filter-row::-webkit-scrollbar { display: none; }
-  .filter-chip {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 6px 14px;
-    font-size: 12px;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: var(--text-muted);
-    font-family: 'DM Sans', sans-serif;
-  }
-  .filter-chip.active { background: var(--accent); color: #0f0e0c; border-color: var(--accent); font-weight: 600; }
-
-  .analyzing-badge {
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    background: var(--accent);
-    color: #0f0e0c;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    text-transform: uppercase;
-  }
-
-  /* Outfit result cards */
-  .outfit-option {
-    background: var(--surface2);
-    border-radius: var(--radius-sm);
-    padding: 14px;
-    margin-top: 12px;
-    border-left: 3px solid var(--accent);
-  }
-  .outfit-option h4 { font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
-  .outfit-option p { font-size: 13px; line-height: 1.7; color: var(--text); }
+/* ── DIVIDER ── */
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
 </style>
 </head>
 <body>
@@ -477,7 +318,7 @@
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="logo">FITS<span>AI STYLIST</span></div>
-  <button class="api-btn" id="apiBtn" onclick="openApiModal()">⚙ API Key</button>
+  <button class="api-btn" id="apiBtn" onclick="openModal('apiModal')">⚙ API Key</button>
 </div>
 
 <!-- NAV -->
@@ -486,13 +327,20 @@
   <div class="nav-tab" onclick="switchTab('suggest')">✨ Style</div>
 </div>
 
-<!-- WARDROBE PAGE -->
+<!-- ═══ WARDROBE PAGE ═══ -->
 <div class="page active" id="page-wardrobe">
-  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragleave="onDragLeave(event)">
+  <div class="upload-zone" id="uploadZone"
+    onclick="document.getElementById('fileInput').click()"
+    ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragleave="onDragLeave(event)">
     <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFiles(event.target.files)">
     <div class="upload-icon">📸</div>
     <h3>Add to Wardrobe</h3>
-    <p>Tap to upload photos of your clothes<br>Gemini AI will analyze & categorize them</p>
+    <p>Upload photos of individual items<br>or photos of yourself in an outfit</p>
+    <div class="upload-hint">
+      <span>👔 Single item</span>
+      <span>🧍 Outfit photo</span>
+      <span>AI auto-tags everything</span>
+    </div>
   </div>
 
   <div class="section-header">
@@ -508,90 +356,49 @@
     <div class="filter-chip" onclick="filterCategory('outerwear', this)">Outerwear</div>
     <div class="filter-chip" onclick="filterCategory('shoes', this)">Shoes</div>
     <div class="filter-chip" onclick="filterCategory('accessories', this)">Accessories</div>
+    <div class="filter-chip" onclick="filterCategory('outfits', this)">Full Outfits</div>
   </div>
 
-  <div class="wardrobe-grid" id="wardrobeGrid">
-    <!-- populated by JS -->
-  </div>
-
+  <div class="wardrobe-grid" id="wardrobeGrid"></div>
   <div class="empty-state" id="emptyState">
     <div class="icon">🧺</div>
     <h3>Your wardrobe is empty</h3>
-    <p>Upload photos of your clothes above.<br>AI will categorize them automatically.</p>
+    <p>Upload photos of your clothes or yourself<br>wearing an outfit. AI will tag everything.</p>
   </div>
 </div>
 
-<!-- SUGGEST PAGE -->
+<!-- ═══ SUGGEST PAGE ═══ -->
 <div class="page" id="page-suggest">
   <div class="section-header" style="margin-top:8px">
-    <div class="section-title">What's the Occasion?</div>
+    <div class="section-title">Occasion</div>
   </div>
+  <div class="occasion-grid" id="occasionGrid"><!-- built by JS --></div>
 
-  <div class="occasion-grid">
-    <div class="occasion-btn selected" onclick="selectOccasion(this, 'Casual day out')" data-occ="Casual day out">
-      <div class="occ-icon">☕</div>
-      <div class="occ-label">Casual</div>
-      <div class="occ-sub">Everyday, relaxed</div>
-    </div>
-    <div class="occasion-btn" onclick="selectOccasion(this, 'Work / Office')" data-occ="Work / Office">
-      <div class="occ-icon">💼</div>
-      <div class="occ-label">Work</div>
-      <div class="occ-sub">Professional, office</div>
-    </div>
-    <div class="occasion-btn" onclick="selectOccasion(this, 'Formal event or dinner')" data-occ="Formal event or dinner">
-      <div class="occ-icon">🥂</div>
-      <div class="occ-label">Formal</div>
-      <div class="occ-sub">Events, dinners</div>
-    </div>
-    <div class="occasion-btn" onclick="selectOccasion(this, 'Date night')" data-occ="Date night">
-      <div class="occ-icon">💫</div>
-      <div class="occ-label">Date Night</div>
-      <div class="occ-sub">Romantic, stylish</div>
-    </div>
-    <div class="occasion-btn" onclick="selectOccasion(this, 'Sport or gym')" data-occ="Sport or gym">
-      <div class="occ-icon">🏋️</div>
-      <div class="occ-label">Active</div>
-      <div class="occ-sub">Sport, gym</div>
-    </div>
-    <div class="occasion-btn" onclick="selectOccasion(this, 'Party or night out')" data-occ="Party or night out">
-      <div class="occ-icon">🎉</div>
-      <div class="occ-label">Party</div>
-      <div class="occ-sub">Night out, fun</div>
-    </div>
-  </div>
+  <div class="divider"></div>
 
   <div class="input-group">
     <span class="input-label">Weather</span>
-    <div class="chip-row">
-      <div class="chip" onclick="toggleChip(this, 'weather')">☀️ Hot</div>
-      <div class="chip selected" onclick="toggleChip(this, 'weather')">🌤 Mild</div>
-      <div class="chip" onclick="toggleChip(this, 'weather')">🌧 Rainy</div>
-      <div class="chip" onclick="toggleChip(this, 'weather')">❄️ Cold</div>
+    <div class="chip-row" id="weatherChips">
+      <div class="chip" onclick="toggleWeather(this)">☀️ Hot</div>
+      <div class="chip selected" onclick="toggleWeather(this)">🌤 Mild</div>
+      <div class="chip" onclick="toggleWeather(this)">🌧 Rainy</div>
+      <div class="chip" onclick="toggleWeather(this)">❄️ Cold</div>
     </div>
   </div>
 
   <div class="input-group">
     <span class="input-label">Style Vibe</span>
-    <div class="chip-row" id="vibeChips">
-      <div class="chip" onclick="toggleChip(this, 'vibe')">Minimalist</div>
-      <div class="chip" onclick="toggleChip(this, 'vibe')">Bold & Colorful</div>
-      <div class="chip" onclick="toggleChip(this, 'vibe')">Classic</div>
-      <div class="chip" onclick="toggleChip(this, 'vibe')">Streetwear</div>
-      <div class="chip" onclick="toggleChip(this, 'vibe')">Boho</div>
-      <div class="chip" onclick="toggleChip(this, 'vibe')">Smart Casual</div>
-    </div>
+    <div class="chip-row" id="vibeChips"><!-- built by JS --></div>
   </div>
 
   <div class="input-group">
     <span class="input-label">Anything else? (optional)</span>
-    <textarea class="notes-input" id="notesInput" placeholder="e.g. I want to look tall, avoid showing my arms, prefer dark tones..."></textarea>
+    <textarea class="notes-input" id="notesInput" placeholder="e.g. prefer dark tones, want to look taller, avoid sleeveless..."></textarea>
   </div>
 
   <button class="generate-btn" id="generateBtn" onclick="generateOutfit()">✨ Suggest My Outfit</button>
 
-  <div class="loading-bar" id="loadingBar">
-    <div class="loading-fill"></div>
-  </div>
+  <div class="loading-bar" id="loadingBar"><div class="loading-fill"></div></div>
 
   <div class="result-box" id="resultBox">
     <div class="result-header">✨ Your Style Suggestions</div>
@@ -599,16 +406,83 @@
   </div>
 </div>
 
-<!-- API KEY MODAL -->
+<!-- ═══ MODAL: API KEY ═══ -->
 <div class="modal-overlay" id="apiModal">
   <div class="modal">
     <h2>Gemini API Key</h2>
-    <p>Add your free Google Gemini API key to power AI outfit suggestions and clothing analysis.</p>
-    <input type="password" id="apiKeyInput" placeholder="AIza...your key here..." />
-    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="modal-link">🔗 Get a free key at Google AI Studio</a>
+    <p>Get a free key from Google AI Studio. Your key is stored only on this device — never sent anywhere except Google.</p>
+    <input type="password" class="modal-input" id="apiKeyInput" placeholder="AIza...your key here...">
+    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="modal-link">🔗 Get a free key at Google AI Studio →</a>
     <div class="btn-row">
-      <button class="btn-cancel" onclick="closeApiModal()">Cancel</button>
+      <button class="btn-cancel" onclick="closeModal('apiModal')">Cancel</button>
       <button class="btn-save" onclick="saveApiKey()">Save Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: ITEM EDIT ═══ -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal" style="max-height:90dvh;overflow-y:auto">
+    <h2 id="editModalTitle">Edit Item</h2>
+    <img id="editPreview" class="preview-img" src="" alt="preview">
+
+    <span class="edit-label">Category</span>
+    <div class="edit-grid" id="editCategoryGrid">
+      <!-- built by JS -->
+    </div>
+
+    <span class="edit-label">Style Type</span>
+    <div class="edit-grid" id="editStyleGrid">
+      <!-- built by JS -->
+    </div>
+
+    <span class="edit-label">Colors</span>
+    <input type="text" class="modal-input" id="editColorInput" placeholder="e.g. navy blue, white stripe">
+
+    <span class="edit-label">Description</span>
+    <input type="text" class="modal-input" id="editDescInput" placeholder="e.g. linen button-up shirt">
+
+    <span class="edit-label">Custom Tags</span>
+    <div class="tag-input-row">
+      <input type="text" class="tag-input" id="editTagInput" placeholder="Add a tag..." onkeydown="if(event.key==='Enter') addEditTag()">
+      <button class="tag-add-btn" onclick="addEditTag()">+</button>
+    </div>
+    <div class="tags-list" id="editTagsList"></div>
+
+    <div style="margin-top:20px"></div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('editModal')">Cancel</button>
+      <button class="btn-save" onclick="saveEditedItem()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: ADD OCCASION ═══ -->
+<div class="modal-overlay" id="occasionModal">
+  <div class="modal">
+    <h2>Add Occasion</h2>
+    <p>Name your custom occasion. It will be saved and shown every time.</p>
+    <input type="text" class="modal-input" id="newOccasionName" placeholder="e.g. Festive, Beach, Wedding...">
+    <span class="edit-label">Pick an emoji</span>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px" id="emojiPicker">
+      <!-- emojis built by JS -->
+    </div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('occasionModal')">Cancel</button>
+      <button class="btn-save" onclick="saveNewOccasion()">Add Occasion</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: ADD VIBE ═══ -->
+<div class="modal-overlay" id="vibeModal">
+  <div class="modal">
+    <h2>Add Style Vibe</h2>
+    <p>Name your custom style vibe. It will be saved permanently.</p>
+    <input type="text" class="modal-input" id="newVibeName" placeholder="e.g. Y2K, Dark Academia, Cottagecore...">
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('vibeModal')">Cancel</button>
+      <button class="btn-save" onclick="saveNewVibe()">Add Vibe</button>
     </div>
   </div>
 </div>
@@ -617,234 +491,291 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ─── STATE ────────────────────────────────────────────────────────
-let wardrobe = []; // { id, dataUrl, category, description, color }
-let apiKey = localStorage.getItem('gemini_api_key') || '';
-let selectedOccasion = 'Casual day out';
-let currentFilter = 'all';
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+const STORAGE_KEY   = 'fits_wardrobe_v2';
+const PREFS_KEY     = 'fits_prefs_v2';
+const API_KEY_STORE = 'fits_gemini_key';
 
-// ─── INIT ─────────────────────────────────────────────────────────
+let wardrobe = [];
+let prefs = {
+  occasions: [
+    { id: 'casual',  label: 'Casual',    icon: '☕', desc: 'Everyday, relaxed' },
+    { id: 'work',    label: 'Work',       icon: '💼', desc: 'Professional' },
+    { id: 'formal',  label: 'Formal',     icon: '🥂', desc: 'Events, dinners' },
+    { id: 'date',    label: 'Date Night', icon: '💫', desc: 'Romantic' },
+    { id: 'active',  label: 'Active',     icon: '🏋️', desc: 'Sport, gym' },
+    { id: 'party',   label: 'Party',      icon: '🎉', desc: 'Night out' },
+  ],
+  vibes: ['Minimalist', 'Bold & Colorful', 'Classic', 'Streetwear', 'Boho', 'Smart Casual'],
+  customOccasions: [],
+  customVibes: [],
+};
+
+let selectedOccasion = 'Casual';
+let selectedEmoji = '✨';
+let currentFilter  = 'all';
+let editingItemId  = null;
+let editTagsList   = [];
+let apiKey = '';
+
+const CATEGORIES = ['tops','bottoms','dresses','outerwear','shoes','accessories','outfits','other'];
+const STYLES     = ['casual','formal','smart-casual','sporty','elegant','streetwear','boho','other'];
+const EMOJIS     = ['✨','🎀','👒','🌸','🌊','🔥','🍂','🌈','💎','🎭','🏝️','❄️','🌙','🎊','🌺','🦋'];
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
+  apiKey = localStorage.getItem(API_KEY_STORE) || '';
   loadWardrobe();
+  loadPrefs();
   updateApiBtn();
+  renderOccasionGrid();
+  renderVibeChips();
+  buildEmojiPicker();
+  buildCategoryGrid();
+  buildStyleGrid();
 });
 
-function updateApiBtn() {
-  const btn = document.getElementById('apiBtn');
-  if (apiKey) {
-    btn.textContent = '✓ API Connected';
-    btn.classList.add('connected');
-  } else {
-    btn.textContent = '⚙ API Key';
-    btn.classList.remove('connected');
+// ══════════════════════════════════════════════
+//  STORAGE  (100% localStorage — GitHub Pages safe)
+// ══════════════════════════════════════════════
+function saveWardrobe() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(wardrobe));
+  } catch(e) {
+    // If storage is full (large images), drop oldest items' dataUrl
+    const compact = wardrobe.map(i => ({ ...i, dataUrl: i.dataUrl?.substring(0, 500) + '...' }));
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(compact)); } catch(e2) { showToast('Storage full — try removing old items'); }
   }
 }
+function loadWardrobe() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) wardrobe = JSON.parse(raw);
+  } catch(e) { wardrobe = []; }
+  renderWardrobe();
+}
+function savePrefs() {
+  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+}
+function loadPrefs() {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      prefs.customOccasions = saved.customOccasions || [];
+      prefs.customVibes     = saved.customVibes     || [];
+    }
+  } catch(e) {}
+}
 
-// ─── TAB SWITCHING ────────────────────────────────────────────────
+// ══════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════
 function switchTab(tab) {
-  document.querySelectorAll('.nav-tab').forEach((t, i) => {
-    t.classList.toggle('active', ['wardrobe','suggest'][i] === tab);
-  });
+  document.querySelectorAll('.nav-tab').forEach((t,i) => t.classList.toggle('active', ['wardrobe','suggest'][i] === tab));
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + tab).classList.add('active');
 }
 
-// ─── FILE HANDLING ────────────────────────────────────────────────
+// ══════════════════════════════════════════════
+//  FILE HANDLING
+// ══════════════════════════════════════════════
 function onDragOver(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('drag-over'); }
 function onDragLeave() { document.getElementById('uploadZone').classList.remove('drag-over'); }
-function onDrop(e) {
-  e.preventDefault();
-  document.getElementById('uploadZone').classList.remove('drag-over');
-  handleFiles(e.dataTransfer.files);
-}
+function onDrop(e) { e.preventDefault(); document.getElementById('uploadZone').classList.remove('drag-over'); handleFiles(e.dataTransfer.files); }
 
 async function handleFiles(files) {
-  if (!files || files.length === 0) return;
+  if (!files || !files.length) return;
   const arr = Array.from(files);
-  showToast(`Uploading ${arr.length} item${arr.length > 1 ? 's' : ''}...`);
+  showToast(`Processing ${arr.length} photo${arr.length > 1 ? 's' : ''}...`);
 
   for (const file of arr) {
-    const dataUrl = await readFileAsDataUrl(file);
-    const tempId = Date.now() + Math.random();
-    const tempItem = { id: tempId, dataUrl, category: 'analyzing', description: 'Analyzing...', color: '' };
-    wardrobe.push(tempItem);
+    const dataUrl = await readAsDataUrl(file);
+    const tempId = 'item_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+    const temp = { id: tempId, dataUrl, category: 'analyzing', description: 'Analyzing...', color: '', style: '', tags: [], isOutfit: false };
+    wardrobe.unshift(temp);
     renderWardrobe();
 
-    // Analyze with Gemini if key available
     if (apiKey) {
       try {
-        const analysis = await analyzeClothingItem(dataUrl);
+        const result = await analyzeWithGemini(dataUrl);
         const idx = wardrobe.findIndex(w => w.id === tempId);
-        if (idx !== -1) {
-          wardrobe[idx] = { ...wardrobe[idx], ...analysis, id: tempId };
-        }
-      } catch(e) {
+        if (idx !== -1) wardrobe[idx] = { ...wardrobe[idx], ...result };
+      } catch(err) {
         const idx = wardrobe.findIndex(w => w.id === tempId);
-        if (idx !== -1) wardrobe[idx].category = 'other';
+        if (idx !== -1) { wardrobe[idx].category = 'other'; wardrobe[idx].description = 'Tap ✏ to edit'; }
+        showToast('AI analysis failed — edit manually');
       }
     } else {
       const idx = wardrobe.findIndex(w => w.id === tempId);
-      if (idx !== -1) {
-        wardrobe[idx].category = 'tops';
-        wardrobe[idx].description = 'Add API key for auto-analysis';
-      }
+      if (idx !== -1) { wardrobe[idx].category = 'tops'; wardrobe[idx].description = 'Add API key for auto-tag'; }
     }
     renderWardrobe();
     saveWardrobe();
   }
-  showToast('Items added to wardrobe!');
+  showToast('✓ Added to wardrobe!');
 }
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => resolve(e.target.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+function readAsDataUrl(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
   });
 }
 
-// ─── GEMINI API ───────────────────────────────────────────────────
-async function analyzeClothingItem(dataUrl) {
-  const base64 = dataUrl.split(',')[1];
+// ══════════════════════════════════════════════
+//  GEMINI AI — CLOTHING ANALYSIS
+// ══════════════════════════════════════════════
+async function analyzeWithGemini(dataUrl) {
+  const base64   = dataUrl.split(',')[1];
   const mimeType = dataUrl.split(';')[0].split(':')[1];
 
-  const prompt = `Analyze this clothing item image. Respond in JSON only (no markdown), with these fields:
-  - category: one of [tops, bottoms, dresses, outerwear, shoes, accessories, other]
-  - description: short 3-5 word description (e.g. "white linen button shirt")
-  - color: main color(s)
-  - style: one of [casual, formal, sporty, smart-casual, elegant, streetwear, boho]
-  
-  Example: {"category":"tops","description":"navy striped polo","color":"navy blue and white","style":"casual"}`;
+  const prompt = `You are a fashion AI. Analyze this image carefully.
 
-  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{
-        parts: [
+Determine if this shows:
+(A) A single clothing item / accessory
+(B) A person wearing a complete outfit
+
+Respond ONLY in valid JSON (no markdown, no backticks) with these fields:
+- isOutfit: boolean (true if person is wearing clothes, false if just an item)
+- category: one of ["tops","bottoms","dresses","outerwear","shoes","accessories","outfits","other"]
+  (use "outfits" if isOutfit is true)
+- description: concise 3-6 word label (e.g. "white linen button-up shirt" or "casual summer beach outfit")
+- color: main color(s) as a short string (e.g. "navy blue and white")
+- style: one of ["casual","formal","smart-casual","sporty","elegant","streetwear","boho","other"]
+- tags: array of 2-4 descriptive tags (e.g. ["summer","lightweight","cotton","relaxed fit"])
+- outfitItems: if isOutfit is true, list the visible clothing items as strings; else empty array
+
+Example for single item: {"isOutfit":false,"category":"tops","description":"striped navy polo shirt","color":"navy and white","style":"casual","tags":["stripes","cotton","summer","classic"],"outfitItems":[]}
+Example for outfit: {"isOutfit":true,"category":"outfits","description":"smart casual office look","color":"grey and white","style":"smart-casual","tags":["layered","professional","neutral"],"outfitItems":["white button-up shirt","grey blazer","navy chinos","white sneakers"]}`;
+
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [
           { inline_data: { mime_type: mimeType, data: base64 } },
           { text: prompt }
-        ]
-      }]
-    })
-  });
-
+        ]}]
+      })
+    }
+  );
   const data = await resp.json();
   if (data.error) throw new Error(data.error.message);
-
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  const clean = text.replace(/```json|```/g, '').trim();
+  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const clean = raw.replace(/```json|```/g, '').trim();
   return JSON.parse(clean);
 }
 
+// ══════════════════════════════════════════════
+//  GEMINI AI — OUTFIT SUGGESTIONS
+// ══════════════════════════════════════════════
 async function generateOutfit() {
-  if (!apiKey) {
-    openApiModal();
-    showToast('Please add your Gemini API key first');
-    return;
-  }
-  if (wardrobe.length < 2) {
-    showToast('Add at least 2 items to your wardrobe first');
-    switchTab('wardrobe');
-    return;
+  if (!apiKey) { openModal('apiModal'); showToast('Please add your Gemini API key first'); return; }
+  if (wardrobe.filter(i => i.category !== 'analyzing').length < 2) {
+    showToast('Add at least 2 items to your wardrobe first'); switchTab('wardrobe'); return;
   }
 
   const btn = document.getElementById('generateBtn');
-  const loadingBar = document.getElementById('loadingBar');
-  const resultBox = document.getElementById('resultBox');
+  btn.disabled = true; btn.textContent = '⏳ Styling...';
+  document.getElementById('loadingBar').classList.add('visible');
+  document.getElementById('resultBox').classList.remove('visible');
 
-  btn.disabled = true;
-  btn.textContent = '⏳ Styling you...';
-  loadingBar.classList.add('visible');
-  resultBox.classList.remove('visible');
+  const weather = document.querySelector('#weatherChips .chip.selected')?.textContent || 'Mild';
+  const vibes   = [...document.querySelectorAll('#vibeChips .chip.selected')].map(c => c.dataset.vibe).join(', ') || 'Any';
+  const notes   = document.getElementById('notesInput').value;
 
-  // Get preferences
-  const weather = [...document.querySelectorAll('#page-suggest .chip.selected')]
-    .filter((_, i) => i === 0 || document.querySelectorAll('#page-suggest .chip.selected')[i-1]?.parentElement !== document.querySelectorAll('#page-suggest .chip.selected')[i]?.parentElement)
-    .map(c => c.textContent);
+  const wardrobeDesc = wardrobe
+    .filter(i => i.category !== 'analyzing')
+    .map((item, i) => {
+      let line = `Item ${i+1}: ${item.description || 'clothing item'} | Category: ${item.category} | Color: ${item.color || '?'} | Style: ${item.style || '?'}`;
+      if (item.tags?.length) line += ` | Tags: ${item.tags.join(', ')}`;
+      if (item.isOutfit && item.outfitItems?.length) line += ` | Contains: ${item.outfitItems.join(', ')}`;
+      return line;
+    }).join('\n');
 
-  const allSelected = [...document.querySelectorAll('#page-suggest .chip.selected')];
-  const weatherChips = allSelected.filter(c => ['☀️ Hot','🌤 Mild','🌧 Rainy','❄️ Cold'].includes(c.textContent));
-  const vibeChips = allSelected.filter(c => !['☀️ Hot','🌤 Mild','🌧 Rainy','❄️ Cold'].includes(c.textContent));
-  const notes = document.getElementById('notesInput').value;
-
-  // Build wardrobe description
-  const wardrobeDesc = wardrobe.map((item, i) =>
-    `Item ${i+1}: ${item.description || 'clothing item'} (${item.category}, ${item.color || 'unknown color'}, style: ${item.style || 'general'})`
-  ).join('\n');
-
-  const prompt = `You are a professional fashion stylist. Based on the following wardrobe, create 2-3 outfit combinations.
+  const prompt = `You are a professional personal fashion stylist. Based on the wardrobe below, suggest 2-3 outfit combinations for the given occasion.
 
 WARDROBE:
 ${wardrobeDesc}
 
 OCCASION: ${selectedOccasion}
-WEATHER: ${weatherChips.map(c=>c.textContent).join(', ') || 'Mild'}
-STYLE VIBE: ${vibeChips.map(c=>c.textContent).join(', ') || 'Any'}
-ADDITIONAL NOTES: ${notes || 'None'}
+WEATHER: ${weather}
+STYLE VIBE: ${vibes}
+PERSONAL NOTES: ${notes || 'None'}
 
-Please provide:
-1. 2-3 specific outfit combinations using items from the wardrobe above (reference them by their description)
-2. For each outfit: what items to wear, why they work together, and any styling tips
-3. A quick general tip for this occasion
-
-Format your response clearly with outfit names and bullet points. Be specific, practical, and encouraging.`;
+Instructions:
+- Suggest 2-3 complete outfit combinations using items from the wardrobe
+- Reference items by their description
+- For each outfit: give it a fun name, list what to wear, why it works, and 1-2 styling tips
+- End with one general styling tip for this occasion
+- Be specific, encouraging, and practical
+- If the wardrobe contains outfit photos, you may use those as inspiration or reference them`;
 
   try {
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.8, maxOutputTokens: 1200 }
-      })
-    });
-
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.8, maxOutputTokens: 1200 }
+        })
+      }
+    );
     const data = await resp.json();
     if (data.error) throw new Error(data.error.message);
-
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No suggestions available.';
     document.getElementById('resultContent').textContent = text;
-    resultBox.classList.add('visible');
-    showToast('Outfit suggestions ready!');
+    document.getElementById('resultBox').classList.add('visible');
+    showToast('✓ Outfit suggestions ready!');
   } catch(e) {
-    document.getElementById('resultContent').textContent = 'Error: ' + e.message + '\n\nPlease check your API key and try again.';
-    resultBox.classList.add('visible');
+    document.getElementById('resultContent').textContent = '⚠ Error: ' + e.message + '\n\nCheck your API key and try again.';
+    document.getElementById('resultBox').classList.add('visible');
   }
 
-  btn.disabled = false;
-  btn.textContent = '✨ Suggest My Outfit';
-  loadingBar.classList.remove('visible');
+  btn.disabled = false; btn.textContent = '✨ Suggest My Outfit';
+  document.getElementById('loadingBar').classList.remove('visible');
 }
 
-// ─── RENDER ───────────────────────────────────────────────────────
+// ══════════════════════════════════════════════
+//  RENDER WARDROBE
+// ══════════════════════════════════════════════
 function renderWardrobe() {
-  const grid = document.getElementById('wardrobeGrid');
+  const grid  = document.getElementById('wardrobeGrid');
   const empty = document.getElementById('emptyState');
-  const count = document.getElementById('itemCount');
-
+  document.getElementById('itemCount').textContent = `${wardrobe.length} item${wardrobe.length !== 1 ? 's' : ''}`;
   const filtered = currentFilter === 'all' ? wardrobe : wardrobe.filter(i => i.category === currentFilter);
-
-  count.textContent = `${wardrobe.length} item${wardrobe.length !== 1 ? 's' : ''}`;
   empty.style.display = wardrobe.length === 0 ? 'block' : 'none';
-  grid.style.display = wardrobe.length === 0 ? 'none' : 'grid';
+  grid.style.display   = wardrobe.length === 0 ? 'none' : 'grid';
 
   grid.innerHTML = filtered.map(item => `
-    <div class="item-card" style="position:relative">
-      <img src="${item.dataUrl}" alt="${item.description || 'clothing'}" loading="lazy">
-      ${item.category === 'analyzing' ? '<div class="analyzing-badge">AI...</div>' : ''}
-      <div class="item-tag">${item.description || item.category}</div>
+    <div class="item-card">
+      <img src="${item.dataUrl}" alt="${item.description || ''}" loading="lazy" onerror="this.style.background='#242220';this.style.minHeight='80px'">
+      ${item.category === 'analyzing'
+        ? '<div class="analyzing-badge">AI...</div>'
+        : `<button class="edit-btn" onclick="openEditModal('${item.id}')" title="Edit">✏</button>`}
+      <div class="item-tag">
+        <div class="tag-cat">${item.isOutfit ? '👗 OUTFIT' : item.category || ''}</div>
+        ${item.description || ''}
+      </div>
       <button class="remove-btn" onclick="removeItem('${item.id}')">✕</button>
     </div>
   `).join('');
 }
 
 function removeItem(id) {
-  wardrobe = wardrobe.filter(i => String(i.id) !== String(id));
-  renderWardrobe();
-  saveWardrobe();
-  showToast('Item removed');
+  wardrobe = wardrobe.filter(i => i.id !== id);
+  renderWardrobe(); saveWardrobe(); showToast('Item removed');
 }
 
 function filterCategory(cat, el) {
@@ -854,66 +785,229 @@ function filterCategory(cat, el) {
   renderWardrobe();
 }
 
-// ─── SELECTION HELPERS ────────────────────────────────────────────
-function selectOccasion(el, occ) {
-  document.querySelectorAll('.occasion-btn').forEach(b => b.classList.remove('selected'));
+// ══════════════════════════════════════════════
+//  EDIT MODAL
+// ══════════════════════════════════════════════
+function buildCategoryGrid() {
+  const grid = document.getElementById('editCategoryGrid');
+  grid.innerHTML = CATEGORIES.map(c => `
+    <div class="edit-option" data-cat="${c}" onclick="selectEditOption(this,'cat')">${c}</div>
+  `).join('');
+}
+function buildStyleGrid() {
+  const grid = document.getElementById('editStyleGrid');
+  grid.innerHTML = STYLES.map(s => `
+    <div class="edit-option" data-sty="${s}" onclick="selectEditOption(this,'sty')">${s}</div>
+  `).join('');
+}
+function selectEditOption(el, type) {
+  const parent = type === 'cat' ? document.getElementById('editCategoryGrid') : document.getElementById('editStyleGrid');
+  parent.querySelectorAll('.edit-option').forEach(e => e.classList.remove('selected'));
   el.classList.add('selected');
-  selectedOccasion = occ;
 }
 
-function toggleChip(el, group) {
-  if (group === 'weather') {
-    // weather: single select
-    el.closest('.chip-row').querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
-    el.classList.add('selected');
-  } else {
-    // vibe: multi select
-    el.classList.toggle('selected');
-  }
+function openEditModal(id) {
+  const item = wardrobe.find(i => i.id === id);
+  if (!item) return;
+  editingItemId = id;
+  editTagsList = [...(item.tags || [])];
+
+  document.getElementById('editModalTitle').textContent = item.isOutfit ? 'Edit Outfit' : 'Edit Item';
+  document.getElementById('editPreview').src = item.dataUrl;
+  document.getElementById('editColorInput').value = item.color || '';
+  document.getElementById('editDescInput').value  = item.description || '';
+
+  // Select category
+  document.querySelectorAll('#editCategoryGrid .edit-option').forEach(el => {
+    el.classList.toggle('selected', el.dataset.cat === item.category);
+  });
+  // Select style
+  document.querySelectorAll('#editStyleGrid .edit-option').forEach(el => {
+    el.classList.toggle('selected', el.dataset.sty === item.style);
+  });
+
+  renderEditTags();
+  openModal('editModal');
 }
 
-// ─── STORAGE ──────────────────────────────────────────────────────
-function saveWardrobe() {
-  try {
-    // Save without large dataURLs if too big — keep all for now
-    localStorage.setItem('fits_wardrobe', JSON.stringify(wardrobe));
-  } catch(e) {
-    // If too large, save without images (just metadata)
-    const meta = wardrobe.map(({dataUrl, ...rest}) => rest);
-    try { localStorage.setItem('fits_wardrobe_meta', JSON.stringify(meta)); } catch(e2){}
-  }
+function renderEditTags() {
+  document.getElementById('editTagsList').innerHTML = editTagsList.map((tag, i) => `
+    <div class="tag-pill">${tag}<button onclick="removeEditTag(${i})">×</button></div>
+  `).join('');
+}
+function addEditTag() {
+  const inp = document.getElementById('editTagInput');
+  const val = inp.value.trim();
+  if (val && !editTagsList.includes(val)) { editTagsList.push(val); renderEditTags(); }
+  inp.value = '';
+}
+function removeEditTag(i) { editTagsList.splice(i,1); renderEditTags(); }
+
+function saveEditedItem() {
+  const idx = wardrobe.findIndex(i => i.id === editingItemId);
+  if (idx === -1) return;
+  const cat = document.querySelector('#editCategoryGrid .edit-option.selected')?.dataset.cat || wardrobe[idx].category;
+  const sty = document.querySelector('#editStyleGrid .edit-option.selected')?.dataset.sty  || wardrobe[idx].style;
+  wardrobe[idx] = {
+    ...wardrobe[idx],
+    category: cat,
+    style:    sty,
+    color:    document.getElementById('editColorInput').value.trim(),
+    description: document.getElementById('editDescInput').value.trim(),
+    tags:     [...editTagsList],
+    isOutfit: cat === 'outfits',
+  };
+  closeModal('editModal');
+  renderWardrobe(); saveWardrobe(); showToast('✓ Item updated');
 }
 
-function loadWardrobe() {
-  try {
-    const stored = localStorage.getItem('fits_wardrobe');
-    if (stored) {
-      wardrobe = JSON.parse(stored);
-      renderWardrobe();
-    }
-  } catch(e) { wardrobe = []; }
+// ══════════════════════════════════════════════
+//  OCCASIONS
+// ══════════════════════════════════════════════
+function allOccasions() {
+  return [...prefs.occasions, ...prefs.customOccasions];
 }
 
-// ─── API MODAL ────────────────────────────────────────────────────
-function openApiModal() {
-  document.getElementById('apiModal').classList.add('open');
-  document.getElementById('apiKeyInput').value = apiKey;
+function renderOccasionGrid() {
+  const grid = document.getElementById('occasionGrid');
+  const all  = allOccasions();
+  grid.innerHTML = all.map(occ => `
+    <div class="occasion-btn ${selectedOccasion === occ.label ? 'selected' : ''}"
+         onclick="selectOccasion('${occ.label}',this)">
+      ${prefs.customOccasions.find(o => o.id === occ.id)
+        ? `<button class="del-occ" onclick="deleteOccasion(event,'${occ.id}')">✕</button>` : ''}
+      <div class="occ-icon">${occ.icon}</div>
+      <div class="occ-label">${occ.label}</div>
+    </div>
+  `).join('') + `
+    <div class="add-occasion-btn" onclick="openModal('occasionModal')">
+      <span class="plus">+</span>
+      <span>Add</span>
+    </div>`;
 }
-function closeApiModal() { document.getElementById('apiModal').classList.remove('open'); }
+
+function selectOccasion(label, el) {
+  selectedOccasion = label;
+  renderOccasionGrid();
+}
+
+function buildEmojiPicker() {
+  document.getElementById('emojiPicker').innerHTML = EMOJIS.map(e => `
+    <div onclick="selectEmoji('${e}',this)" style="font-size:26px;cursor:pointer;padding:4px;border-radius:8px;border:2px solid transparent;transition:all .2s" data-emoji="${e}">${e}</div>
+  `).join('');
+  selectEmoji(EMOJIS[0], document.querySelector('[data-emoji="' + EMOJIS[0] + '"]'));
+}
+function selectEmoji(e, el) {
+  selectedEmoji = e;
+  document.querySelectorAll('#emojiPicker [data-emoji]').forEach(d => d.style.borderColor = 'transparent');
+  if(el) el.style.borderColor = 'var(--accent)';
+}
+
+function saveNewOccasion() {
+  const name = document.getElementById('newOccasionName').value.trim();
+  if (!name) { showToast('Please enter an occasion name'); return; }
+  const newOcc = { id: 'custom_' + Date.now(), label: name, icon: selectedEmoji, custom: true };
+  prefs.customOccasions.push(newOcc);
+  savePrefs(); closeModal('occasionModal');
+  document.getElementById('newOccasionName').value = '';
+  renderOccasionGrid(); showToast('✓ Occasion added!');
+}
+
+function deleteOccasion(e, id) {
+  e.stopPropagation();
+  prefs.customOccasions = prefs.customOccasions.filter(o => o.id !== id);
+  if (selectedOccasion === id) selectedOccasion = 'Casual';
+  savePrefs(); renderOccasionGrid();
+}
+
+// ══════════════════════════════════════════════
+//  VIBES
+// ══════════════════════════════════════════════
+function allVibes() {
+  return [...prefs.vibes, ...prefs.customVibes];
+}
+
+function renderVibeChips() {
+  const row = document.getElementById('vibeChips');
+  row.innerHTML = allVibes().map(v => `
+    <div class="chip" data-vibe="${v}" onclick="toggleVibe(this)">
+      ${v}
+      ${prefs.customVibes.includes(v)
+        ? `<span class="del-chip" onclick="deleteVibe(event,'${v}')">✕</span>` : ''}
+    </div>
+  `).join('') + `<button class="add-chip-btn" onclick="openModal('vibeModal')">+ Add</button>`;
+}
+
+function toggleVibe(el) {
+  if (el.classList.contains('add-chip-btn')) return;
+  el.classList.toggle('selected');
+}
+
+function saveNewVibe() {
+  const name = document.getElementById('newVibeName').value.trim();
+  if (!name) { showToast('Please enter a vibe name'); return; }
+  if (allVibes().includes(name)) { showToast('Vibe already exists'); return; }
+  prefs.customVibes.push(name);
+  savePrefs(); closeModal('vibeModal');
+  document.getElementById('newVibeName').value = '';
+  renderVibeChips(); showToast('✓ Vibe added!');
+}
+
+function deleteVibe(e, name) {
+  e.stopPropagation();
+  prefs.customVibes = prefs.customVibes.filter(v => v !== name);
+  savePrefs(); renderVibeChips();
+}
+
+// ══════════════════════════════════════════════
+//  WEATHER (single select)
+// ══════════════════════════════════════════════
+function toggleWeather(el) {
+  document.querySelectorAll('#weatherChips .chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ══════════════════════════════════════════════
+//  MODAL HELPERS
+// ══════════════════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// Close modals on overlay tap
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(overlay.id); });
+});
+
+// ══════════════════════════════════════════════
+//  API KEY
+// ══════════════════════════════════════════════
+function updateApiBtn() {
+  const btn = document.getElementById('apiBtn');
+  btn.textContent = apiKey ? '✓ API Connected' : '⚙ API Key';
+  btn.classList.toggle('connected', !!apiKey);
+}
 function saveApiKey() {
   apiKey = document.getElementById('apiKeyInput').value.trim();
-  localStorage.setItem('gemini_api_key', apiKey);
-  closeApiModal();
-  updateApiBtn();
+  localStorage.setItem(API_KEY_STORE, apiKey);
+  closeModal('apiModal'); updateApiBtn();
   showToast(apiKey ? '✓ API key saved!' : 'API key removed');
 }
+function openApiModal() {
+  document.getElementById('apiKeyInput').value = apiKey;
+  openModal('apiModal');
+}
+document.getElementById('apiBtn').onclick = () => {
+  document.getElementById('apiKeyInput').value = apiKey;
+  openModal('apiModal');
+};
 
-// ─── TOAST ────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
 let toastTimer;
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
 }
