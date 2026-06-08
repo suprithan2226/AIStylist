@@ -756,11 +756,11 @@ const EMOJIS  = ['✨','🎀','👒','🌸','🌊','🔥','🍂','🌈','💎','
 // ══════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   apiKey      = localStorage.getItem(API_KEY_STORE)    || '';
   visionModel = localStorage.getItem(VISION_MODEL_KEY) || DEFAULT_VISION;
   textModel   = localStorage.getItem(TEXT_MODEL_KEY)   || DEFAULT_TEXT;
-  loadWardrobe();
+  await loadWardrobe();
   loadPrefs();
   updateApiBtn();
   renderOccasionGrid();
@@ -769,24 +769,94 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ══════════════════════════════════════════════
-//  STORAGE  (100% localStorage — GitHub Pages safe)
+//  INDEXEDDB STORAGE  (handles large images reliably)
 // ══════════════════════════════════════════════
-function saveWardrobe() {
+const DB_NAME    = 'fits_db';
+const DB_VERSION = 1;
+const STORE_NAME = 'wardrobe';
+let db = null;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    if (db) { resolve(db); return; }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains(STORE_NAME)) {
+        d.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; resolve(db); };
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+async function saveWardrobe() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(wardrobe));
+    const d = await openDB();
+    const tx = d.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    // Clear all then re-add (simple full-replace strategy)
+    await new Promise((res, rej) => {
+      const r = store.clear();
+      r.onsuccess = res; r.onerror = rej;
+    });
+    for (const item of wardrobe) {
+      store.put(item);
+    }
+    await new Promise((res, rej) => {
+      tx.oncomplete = res; tx.onerror = rej;
+    });
   } catch(e) {
-    // If storage is full (large images), drop oldest items' dataUrl
-    const compact = wardrobe.map(i => ({ ...i, dataUrl: i.dataUrl?.substring(0, 500) + '...' }));
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(compact)); } catch(e2) { showToast('Storage full — try removing old items'); }
+    console.error('IndexedDB save error:', e);
+    // Fallback: try localStorage without images
+    try {
+      const meta = wardrobe.map(({ dataUrl, ...rest }) => rest);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(meta));
+    } catch(e2) {}
   }
 }
-function loadWardrobe() {
+
+async function loadWardrobe() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) wardrobe = JSON.parse(raw);
-  } catch(e) { wardrobe = []; }
+    const d = await openDB();
+    const tx = d.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const items = await new Promise((res, rej) => {
+      const r = store.getAll();
+      r.onsuccess = () => res(r.result);
+      r.onerror   = () => rej(r.error);
+    });
+    // Sort by insertion order (newest first) using id timestamp
+    wardrobe = items.sort((a, b) => {
+      const ta = parseInt(a.id.split('_')[1]) || 0;
+      const tb = parseInt(b.id.split('_')[1]) || 0;
+      return tb - ta;
+    });
+    // Fix any items stuck in 'analyzing' state from a previous session
+    let hadStuck = false;
+    wardrobe = wardrobe.map(item => {
+      if (item.category === 'analyzing') {
+        hadStuck = true;
+        return { ...item, category: 'Other', description: 'Tap ✏ to edit tags' };
+      }
+      return item;
+    });
+    if (hadStuck) {
+      showToast('Some items need manual tagging — tap ✏ to edit');
+      await saveWardrobe();
+    }
+  } catch(e) {
+    console.error('IndexedDB load error:', e);
+    // Fallback: try localStorage (metadata only, no images)
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) wardrobe = JSON.parse(raw);
+    } catch(e2) { wardrobe = []; }
+  }
   renderWardrobe();
 }
+
 function savePrefs() {
   localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
 }
@@ -825,26 +895,39 @@ async function handleFiles(files) {
   for (const file of arr) {
     const dataUrl = await readAsDataUrl(file);
     const tempId = 'item_' + Date.now() + '_' + Math.floor(Math.random()*10000);
-    const temp = { id: tempId, dataUrl, category: 'analyzing', description: 'Analyzing...', color: '', style: '', tags: [], isOutfit: false };
+    const temp = { id: tempId, dataUrl, category: 'analyzing', description: 'Analyzing...', color: '', colors: [], style: '', tags: [], isOutfit: false };
     wardrobe.unshift(temp);
     renderWardrobe();
 
     if (apiKey) {
       try {
-        const result = await analyzeWithGemini(dataUrl);
+        // 30-second timeout — if AI doesn't respond, fall back gracefully
+        const result = await Promise.race([
+          analyzeWithGemini(dataUrl),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 30000))
+        ]);
         const idx = wardrobe.findIndex(w => w.id === tempId);
         if (idx !== -1) wardrobe[idx] = { ...wardrobe[idx], ...result };
       } catch(err) {
         const idx = wardrobe.findIndex(w => w.id === tempId);
-        if (idx !== -1) { wardrobe[idx].category = 'other'; wardrobe[idx].description = 'Tap ✏ to edit'; }
-        showToast('AI analysis failed — tap ✏ to tag manually, or switch model in ⚙');
+        if (idx !== -1) {
+          wardrobe[idx].category    = 'Other';
+          wardrobe[idx].description = 'Tap ✏ to edit tags';
+        }
+        const msg = err.message === 'timeout'
+          ? 'AI timed out — tap ✏ to tag manually'
+          : 'AI analysis failed — tap ✏ to tag manually';
+        showToast(msg);
       }
     } else {
       const idx = wardrobe.findIndex(w => w.id === tempId);
-      if (idx !== -1) { wardrobe[idx].category = 'tops'; wardrobe[idx].description = 'Add API key for auto-tag'; }
+      if (idx !== -1) {
+        wardrobe[idx].category    = 'Other';
+        wardrobe[idx].description = 'No API key — tap ✏ to tag';
+      }
     }
     renderWardrobe();
-    saveWardrobe();
+    await saveWardrobe();
   }
   showToast('✓ Added to wardrobe!');
 }
@@ -1044,7 +1127,7 @@ function renderOutfitResults(result, readyItems) {
           ${outfit.tip ? `<div class="outfit-tip">💡 ${outfit.tip}</div>` : ''}
         </div>
 
-        <button class="gen-look-btn" id="genBtn${idx}" onclick="generateIllustration(${idx}, \`${(outfit.imagePrompt||'').replace(/`/g,"'")}\`)">
+        <button class="gen-look-btn" id="genBtn${idx}" onclick="generateIllustration(${idx}, \`${(outfit.imagePrompt||'').replace(/`/g,"'")}\`)" style="display:none">
           🎨 Generate AI Fashion Look
         </button>
         <div class="illustration-box" id="illBox${idx}"></div>
@@ -1146,8 +1229,14 @@ function renderWardrobe() {
   `).join('');
 }
 
-function removeItem(id) {
+async function removeItem(id) {
   wardrobe = wardrobe.filter(i => i.id !== id);
+  // Also delete directly from IndexedDB
+  try {
+    const d = await openDB();
+    const tx = d.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).delete(id);
+  } catch(e) {}
   renderWardrobe(); saveWardrobe(); showToast('Item removed');
 }
 
