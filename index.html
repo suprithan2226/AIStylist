@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>FITS — AI Wardrobe Stylist</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e0c;
+    --surface: #1a1916;
+    --surface2: #242220;
+    --border: #2e2c29;
+    --accent: #e8c97e;
+    --accent2: #c97e4e;
+    --text: #f0ede8;
+    --text-muted: #8a8780;
+    --danger: #c0392b;
+    --success: #6aa97a;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 20px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: var(--accent);
+  }
+  .logo span { color: var(--text-muted); font-weight: 400; font-size: 12px; letter-spacing: 3px; display: block; margin-top: -4px; }
+
+  .api-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+  }
+  .api-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .api-btn.connected { border-color: var(--success); color: var(--success); }
+
+  /* NAV TABS */
+  .nav {
+    display: flex;
+    padding: 12px 20px 0;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .nav-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 4px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* PAGE SECTIONS */
+  .page { display: none; padding: 20px; padding-bottom: 80px; }
+  .page.active { display: block; }
+
+  /* UPLOAD AREA */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: #1e1c18;
+  }
+  .upload-zone input { display: none; }
+  .upload-icon { font-size: 40px; margin-bottom: 12px; }
+  .upload-zone h3 { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--text); margin-bottom: 6px; }
+  .upload-zone p { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+  /* SECTION HEADERS */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 24px 0 14px;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .section-count {
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  /* WARDROBE GRID */
+  .wardrobe-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .item-card {
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    position: relative;
+    aspect-ratio: 3/4;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+  }
+  .item-card:hover { border-color: var(--accent); transform: scale(1.02); }
+  .item-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .item-card .item-tag {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    padding: 20px 8px 8px;
+    font-size: 10px;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .item-card .remove-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .item-card:hover .remove-btn { opacity: 1; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state h3 { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--text); margin-bottom: 8px; }
+  .empty-state p { font-size: 13px; line-height: 1.6; }
+
+  /* SUGGEST PAGE */
+  .occasion-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .occasion-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .occasion-btn:hover { border-color: var(--accent); }
+  .occasion-btn.selected { border-color: var(--accent); background: #1e1c18; }
+  .occasion-btn .occ-icon { font-size: 28px; margin-bottom: 8px; }
+  .occasion-btn .occ-label { font-size: 13px; font-weight: 500; color: var(--text); }
+  .occasion-btn .occ-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* WEATHER / STYLE INPUTS */
+  .input-group { margin: 16px 0; }
+  .input-label { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; display: block; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 7px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--text); }
+  .chip.selected { border-color: var(--accent); color: var(--accent); background: #1e1c18; }
+
+  .notes-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    resize: none;
+    height: 80px;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-top: 8px;
+  }
+  .notes-input:focus { border-color: var(--accent); }
+  .notes-input::placeholder { color: var(--text-muted); }
+
+  /* GENERATE BUTTON */
+  .generate-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: var(--radius);
+    padding: 18px;
+    color: #0f0e0c;
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    margin-top: 24px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .generate-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(232,201,126,0.3); }
+  .generate-btn:active { transform: translateY(0); }
+  .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* RESULT AREA */
+  .result-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-top: 20px;
+    display: none;
+  }
+  .result-box.visible { display: block; }
+  .result-header {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    color: var(--accent);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .result-content {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+  .result-content strong { color: var(--accent); }
+
+  /* LOADING */
+  .loading-bar {
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 16px 0;
+    display: none;
+  }
+  .loading-bar.visible { display: block; }
+  .loading-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    width: 0%;
+    animation: loadpulse 2s infinite;
+    border-radius: 2px;
+  }
+  @keyframes loadpulse {
+    0% { width: 0%; opacity: 1; }
+    50% { width: 80%; opacity: 0.8; }
+    100% { width: 100%; opacity: 0; }
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    width: 100%;
+    max-width: 400px;
+  }
+  .modal h2 { font-family: 'Playfair Display', serif; font-size: 22px; margin-bottom: 8px; }
+  .modal p { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; }
+  .modal input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+  .modal input:focus { border-color: var(--accent); }
+  .modal-link { font-size: 12px; color: var(--accent); text-decoration: none; display: block; margin-top: -8px; margin-bottom: 20px; }
+  .btn-row { display: flex; gap: 10px; }
+  .btn-cancel {
+    flex: 1;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-cancel:hover { border-color: var(--text-muted); color: var(--text); }
+  .btn-save {
+    flex: 2;
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    color: #0f0e0c;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-save:hover { background: #f0d48a; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 10px 20px;
+    font-size: 13px;
+    color: var(--text);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 300;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* PULSE ANIMATION for adding items */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .item-card { animation: fadeIn 0.3s ease; }
+
+  /* Category filter */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    margin-bottom: 16px;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .filter-chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+  }
+  .filter-chip.active { background: var(--accent); color: #0f0e0c; border-color: var(--accent); font-weight: 600; }
+
+  .analyzing-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: var(--accent);
+    color: #0f0e0c;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+
+  /* Outfit result cards */
+  .outfit-option {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-top: 12px;
+    border-left: 3px solid var(--accent);
+  }
+  .outfit-option h4 { font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+  .outfit-option p { font-size: 13px; line-height: 1.7; color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">FITS<span>AI STYLIST</span></div>
+  <button class="api-btn" id="apiBtn" onclick="openApiModal()">⚙ API Key</button>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-tab active" onclick="switchTab('wardrobe')">👗 Wardrobe</div>
+  <div class="nav-tab" onclick="switchTab('suggest')">✨ Style</div>
+</div>
+
+<!-- WARDROBE PAGE -->
+<div class="page active" id="page-wardrobe">
+  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragleave="onDragLeave(event)">
+    <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFiles(event.target.files)">
+    <div class="upload-icon">📸</div>
+    <h3>Add to Wardrobe</h3>
+    <p>Tap to upload photos of your clothes<br>Gemini AI will analyze & categorize them</p>
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">My Clothes</div>
+    <div class="section-count" id="itemCount">0 items</div>
+  </div>
+
+  <div class="filter-row" id="filterRow">
+    <div class="filter-chip active" onclick="filterCategory('all', this)">All</div>
+    <div class="filter-chip" onclick="filterCategory('tops', this)">Tops</div>
+    <div class="filter-chip" onclick="filterCategory('bottoms', this)">Bottoms</div>
+    <div class="filter-chip" onclick="filterCategory('dresses', this)">Dresses</div>
+    <div class="filter-chip" onclick="filterCategory('outerwear', this)">Outerwear</div>
+    <div class="filter-chip" onclick="filterCategory('shoes', this)">Shoes</div>
+    <div class="filter-chip" onclick="filterCategory('accessories', this)">Accessories</div>
+  </div>
+
+  <div class="wardrobe-grid" id="wardrobeGrid">
+    <!-- populated by JS -->
+  </div>
+
+  <div class="empty-state" id="emptyState">
+    <div class="icon">🧺</div>
+    <h3>Your wardrobe is empty</h3>
+    <p>Upload photos of your clothes above.<br>AI will categorize them automatically.</p>
+  </div>
+</div>
+
+<!-- SUGGEST PAGE -->
+<div class="page" id="page-suggest">
+  <div class="section-header" style="margin-top:8px">
+    <div class="section-title">What's the Occasion?</div>
+  </div>
+
+  <div class="occasion-grid">
+    <div class="occasion-btn selected" onclick="selectOccasion(this, 'Casual day out')" data-occ="Casual day out">
+      <div class="occ-icon">☕</div>
+      <div class="occ-label">Casual</div>
+      <div class="occ-sub">Everyday, relaxed</div>
+    </div>
+    <div class="occasion-btn" onclick="selectOccasion(this, 'Work / Office')" data-occ="Work / Office">
+      <div class="occ-icon">💼</div>
+      <div class="occ-label">Work</div>
+      <div class="occ-sub">Professional, office</div>
+    </div>
+    <div class="occasion-btn" onclick="selectOccasion(this, 'Formal event or dinner')" data-occ="Formal event or dinner">
+      <div class="occ-icon">🥂</div>
+      <div class="occ-label">Formal</div>
+      <div class="occ-sub">Events, dinners</div>
+    </div>
+    <div class="occasion-btn" onclick="selectOccasion(this, 'Date night')" data-occ="Date night">
+      <div class="occ-icon">💫</div>
+      <div class="occ-label">Date Night</div>
+      <div class="occ-sub">Romantic, stylish</div>
+    </div>
+    <div class="occasion-btn" onclick="selectOccasion(this, 'Sport or gym')" data-occ="Sport or gym">
+      <div class="occ-icon">🏋️</div>
+      <div class="occ-label">Active</div>
+      <div class="occ-sub">Sport, gym</div>
+    </div>
+    <div class="occasion-btn" onclick="selectOccasion(this, 'Party or night out')" data-occ="Party or night out">
+      <div class="occ-icon">🎉</div>
+      <div class="occ-label">Party</div>
+      <div class="occ-sub">Night out, fun</div>
+    </div>
+  </div>
+
+  <div class="input-group">
+    <span class="input-label">Weather</span>
+    <div class="chip-row">
+      <div class="chip" onclick="toggleChip(this, 'weather')">☀️ Hot</div>
+      <div class="chip selected" onclick="toggleChip(this, 'weather')">🌤 Mild</div>
+      <div class="chip" onclick="toggleChip(this, 'weather')">🌧 Rainy</div>
+      <div class="chip" onclick="toggleChip(this, 'weather')">❄️ Cold</div>
+    </div>
+  </div>
+
+  <div class="input-group">
+    <span class="input-label">Style Vibe</span>
+    <div class="chip-row" id="vibeChips">
+      <div class="chip" onclick="toggleChip(this, 'vibe')">Minimalist</div>
+      <div class="chip" onclick="toggleChip(this, 'vibe')">Bold & Colorful</div>
+      <div class="chip" onclick="toggleChip(this, 'vibe')">Classic</div>
+      <div class="chip" onclick="toggleChip(this, 'vibe')">Streetwear</div>
+      <div class="chip" onclick="toggleChip(this, 'vibe')">Boho</div>
+      <div class="chip" onclick="toggleChip(this, 'vibe')">Smart Casual</div>
+    </div>
+  </div>
+
+  <div class="input-group">
+    <span class="input-label">Anything else? (optional)</span>
+    <textarea class="notes-input" id="notesInput" placeholder="e.g. I want to look tall, avoid showing my arms, prefer dark tones..."></textarea>
+  </div>
+
+  <button class="generate-btn" id="generateBtn" onclick="generateOutfit()">✨ Suggest My Outfit</button>
+
+  <div class="loading-bar" id="loadingBar">
+    <div class="loading-fill"></div>
+  </div>
+
+  <div class="result-box" id="resultBox">
+    <div class="result-header">✨ Your Style Suggestions</div>
+    <div class="result-content" id="resultContent"></div>
+  </div>
+</div>
+
+<!-- API KEY MODAL -->
+<div class="modal-overlay" id="apiModal">
+  <div class="modal">
+    <h2>Gemini API Key</h2>
+    <p>Add your free Google Gemini API key to power AI outfit suggestions and clothing analysis.</p>
+    <input type="password" id="apiKeyInput" placeholder="AIza...your key here..." />
+    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="modal-link">🔗 Get a free key at Google AI Studio</a>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeApiModal()">Cancel</button>
+      <button class="btn-save" onclick="saveApiKey()">Save Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────
+let wardrobe = []; // { id, dataUrl, category, description, color }
+let apiKey = localStorage.getItem('gemini_api_key') || '';
+let selectedOccasion = 'Casual day out';
+let currentFilter = 'all';
+
+// ─── INIT ─────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  loadWardrobe();
+  updateApiBtn();
+});
+
+function updateApiBtn() {
+  const btn = document.getElementById('apiBtn');
+  if (apiKey) {
+    btn.textContent = '✓ API Connected';
+    btn.classList.add('connected');
+  } else {
+    btn.textContent = '⚙ API Key';
+    btn.classList.remove('connected');
+  }
+}
+
+// ─── TAB SWITCHING ────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach((t, i) => {
+    t.classList.toggle('active', ['wardrobe','suggest'][i] === tab);
+  });
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+}
+
+// ─── FILE HANDLING ────────────────────────────────────────────────
+function onDragOver(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('drag-over'); }
+function onDragLeave() { document.getElementById('uploadZone').classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+  handleFiles(e.dataTransfer.files);
+}
+
+async function handleFiles(files) {
+  if (!files || files.length === 0) return;
+  const arr = Array.from(files);
+  showToast(`Uploading ${arr.length} item${arr.length > 1 ? 's' : ''}...`);
+
+  for (const file of arr) {
+    const dataUrl = await readFileAsDataUrl(file);
+    const tempId = Date.now() + Math.random();
+    const tempItem = { id: tempId, dataUrl, category: 'analyzing', description: 'Analyzing...', color: '' };
+    wardrobe.push(tempItem);
+    renderWardrobe();
+
+    // Analyze with Gemini if key available
+    if (apiKey) {
+      try {
+        const analysis = await analyzeClothingItem(dataUrl);
+        const idx = wardrobe.findIndex(w => w.id === tempId);
+        if (idx !== -1) {
+          wardrobe[idx] = { ...wardrobe[idx], ...analysis, id: tempId };
+        }
+      } catch(e) {
+        const idx = wardrobe.findIndex(w => w.id === tempId);
+        if (idx !== -1) wardrobe[idx].category = 'other';
+      }
+    } else {
+      const idx = wardrobe.findIndex(w => w.id === tempId);
+      if (idx !== -1) {
+        wardrobe[idx].category = 'tops';
+        wardrobe[idx].description = 'Add API key for auto-analysis';
+      }
+    }
+    renderWardrobe();
+    saveWardrobe();
+  }
+  showToast('Items added to wardrobe!');
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ─── GEMINI API ───────────────────────────────────────────────────
+async function analyzeClothingItem(dataUrl) {
+  const base64 = dataUrl.split(',')[1];
+  const mimeType = dataUrl.split(';')[0].split(':')[1];
+
+  const prompt = `Analyze this clothing item image. Respond in JSON only (no markdown), with these fields:
+  - category: one of [tops, bottoms, dresses, outerwear, shoes, accessories, other]
+  - description: short 3-5 word description (e.g. "white linen button shirt")
+  - color: main color(s)
+  - style: one of [casual, formal, sporty, smart-casual, elegant, streetwear, boho]
+  
+  Example: {"category":"tops","description":"navy striped polo","color":"navy blue and white","style":"casual"}`;
+
+  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { inline_data: { mime_type: mimeType, data: base64 } },
+          { text: prompt }
+        ]
+      }]
+    })
+  });
+
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message);
+
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const clean = text.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+async function generateOutfit() {
+  if (!apiKey) {
+    openApiModal();
+    showToast('Please add your Gemini API key first');
+    return;
+  }
+  if (wardrobe.length < 2) {
+    showToast('Add at least 2 items to your wardrobe first');
+    switchTab('wardrobe');
+    return;
+  }
+
+  const btn = document.getElementById('generateBtn');
+  const loadingBar = document.getElementById('loadingBar');
+  const resultBox = document.getElementById('resultBox');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Styling you...';
+  loadingBar.classList.add('visible');
+  resultBox.classList.remove('visible');
+
+  // Get preferences
+  const weather = [...document.querySelectorAll('#page-suggest .chip.selected')]
+    .filter((_, i) => i === 0 || document.querySelectorAll('#page-suggest .chip.selected')[i-1]?.parentElement !== document.querySelectorAll('#page-suggest .chip.selected')[i]?.parentElement)
+    .map(c => c.textContent);
+
+  const allSelected = [...document.querySelectorAll('#page-suggest .chip.selected')];
+  const weatherChips = allSelected.filter(c => ['☀️ Hot','🌤 Mild','🌧 Rainy','❄️ Cold'].includes(c.textContent));
+  const vibeChips = allSelected.filter(c => !['☀️ Hot','🌤 Mild','🌧 Rainy','❄️ Cold'].includes(c.textContent));
+  const notes = document.getElementById('notesInput').value;
+
+  // Build wardrobe description
+  const wardrobeDesc = wardrobe.map((item, i) =>
+    `Item ${i+1}: ${item.description || 'clothing item'} (${item.category}, ${item.color || 'unknown color'}, style: ${item.style || 'general'})`
+  ).join('\n');
+
+  const prompt = `You are a professional fashion stylist. Based on the following wardrobe, create 2-3 outfit combinations.
+
+WARDROBE:
+${wardrobeDesc}
+
+OCCASION: ${selectedOccasion}
+WEATHER: ${weatherChips.map(c=>c.textContent).join(', ') || 'Mild'}
+STYLE VIBE: ${vibeChips.map(c=>c.textContent).join(', ') || 'Any'}
+ADDITIONAL NOTES: ${notes || 'None'}
+
+Please provide:
+1. 2-3 specific outfit combinations using items from the wardrobe above (reference them by their description)
+2. For each outfit: what items to wear, why they work together, and any styling tips
+3. A quick general tip for this occasion
+
+Format your response clearly with outfit names and bullet points. Be specific, practical, and encouraging.`;
+
+  try {
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.8, maxOutputTokens: 1200 }
+      })
+    });
+
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No suggestions available.';
+    document.getElementById('resultContent').textContent = text;
+    resultBox.classList.add('visible');
+    showToast('Outfit suggestions ready!');
+  } catch(e) {
+    document.getElementById('resultContent').textContent = 'Error: ' + e.message + '\n\nPlease check your API key and try again.';
+    resultBox.classList.add('visible');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✨ Suggest My Outfit';
+  loadingBar.classList.remove('visible');
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────
+function renderWardrobe() {
+  const grid = document.getElementById('wardrobeGrid');
+  const empty = document.getElementById('emptyState');
+  const count = document.getElementById('itemCount');
+
+  const filtered = currentFilter === 'all' ? wardrobe : wardrobe.filter(i => i.category === currentFilter);
+
+  count.textContent = `${wardrobe.length} item${wardrobe.length !== 1 ? 's' : ''}`;
+  empty.style.display = wardrobe.length === 0 ? 'block' : 'none';
+  grid.style.display = wardrobe.length === 0 ? 'none' : 'grid';
+
+  grid.innerHTML = filtered.map(item => `
+    <div class="item-card" style="position:relative">
+      <img src="${item.dataUrl}" alt="${item.description || 'clothing'}" loading="lazy">
+      ${item.category === 'analyzing' ? '<div class="analyzing-badge">AI...</div>' : ''}
+      <div class="item-tag">${item.description || item.category}</div>
+      <button class="remove-btn" onclick="removeItem('${item.id}')">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeItem(id) {
+  wardrobe = wardrobe.filter(i => String(i.id) !== String(id));
+  renderWardrobe();
+  saveWardrobe();
+  showToast('Item removed');
+}
+
+function filterCategory(cat, el) {
+  currentFilter = cat;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderWardrobe();
+}
+
+// ─── SELECTION HELPERS ────────────────────────────────────────────
+function selectOccasion(el, occ) {
+  document.querySelectorAll('.occasion-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedOccasion = occ;
+}
+
+function toggleChip(el, group) {
+  if (group === 'weather') {
+    // weather: single select
+    el.closest('.chip-row').querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+  } else {
+    // vibe: multi select
+    el.classList.toggle('selected');
+  }
+}
+
+// ─── STORAGE ──────────────────────────────────────────────────────
+function saveWardrobe() {
+  try {
+    // Save without large dataURLs if too big — keep all for now
+    localStorage.setItem('fits_wardrobe', JSON.stringify(wardrobe));
+  } catch(e) {
+    // If too large, save without images (just metadata)
+    const meta = wardrobe.map(({dataUrl, ...rest}) => rest);
+    try { localStorage.setItem('fits_wardrobe_meta', JSON.stringify(meta)); } catch(e2){}
+  }
+}
+
+function loadWardrobe() {
+  try {
+    const stored = localStorage.getItem('fits_wardrobe');
+    if (stored) {
+      wardrobe = JSON.parse(stored);
+      renderWardrobe();
+    }
+  } catch(e) { wardrobe = []; }
+}
+
+// ─── API MODAL ────────────────────────────────────────────────────
+function openApiModal() {
+  document.getElementById('apiModal').classList.add('open');
+  document.getElementById('apiKeyInput').value = apiKey;
+}
+function closeApiModal() { document.getElementById('apiModal').classList.remove('open'); }
+function saveApiKey() {
+  apiKey = document.getElementById('apiKeyInput').value.trim();
+  localStorage.setItem('gemini_api_key', apiKey);
+  closeApiModal();
+  updateApiBtn();
+  showToast(apiKey ? '✓ API key saved!' : 'API key removed');
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
