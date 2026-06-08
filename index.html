@@ -656,7 +656,7 @@ Example for single item: {"isOutfit":false,"category":"tops","description":"stri
 Example for outfit: {"isOutfit":true,"category":"outfits","description":"smart casual office look","color":"grey and white","style":"smart-casual","tags":["layered","professional","neutral"],"outfitItems":["white button-up shirt","grey blazer","navy chinos","white sneakers"]}`;
 
   const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -722,7 +722,7 @@ Instructions:
 
   try {
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
