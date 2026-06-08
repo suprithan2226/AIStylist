@@ -573,20 +573,35 @@ body {
     <img id="editPreview" class="preview-img" src="" alt="preview">
 
     <span class="edit-label">Category</span>
-    <div class="edit-grid" id="editCategoryGrid">
-      <!-- built by JS -->
+    <div style="position:relative;margin-bottom:4px">
+      <select class="modal-input" id="editCategorySelect" onchange="onCategoryChange()" style="cursor:pointer;padding-right:32px"></select>
+    </div>
+    <div id="editCategoryCustom" style="display:none;margin-bottom:4px">
+      <input type="text" class="modal-input" id="editCategoryCustomInput" placeholder="Type your category (e.g. Sari Blouse, Ghagra...)">
     </div>
 
     <span class="edit-label">Style Type</span>
-    <div class="edit-grid" id="editStyleGrid">
-      <!-- built by JS -->
+    <div style="position:relative;margin-bottom:4px">
+      <select class="modal-input" id="editStyleSelect" onchange="onStyleChange()" style="cursor:pointer"></select>
+    </div>
+    <div id="editStyleCustom" style="display:none;margin-bottom:4px">
+      <input type="text" class="modal-input" id="editStyleCustomInput" placeholder="Type your style (e.g. Festival Boho, Royal...)">
     </div>
 
-    <span class="edit-label">Colors</span>
-    <input type="text" class="modal-input" id="editColorInput" placeholder="e.g. navy blue, white stripe">
+    <span class="edit-label">Colors <span style="font-size:10px;color:var(--text-muted);text-transform:none;letter-spacing:0">(select all that apply)</span></span>
+    <div id="editColorsChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:4px">
+      <select class="modal-input" id="editColorSelect" onchange="addColorFromDropdown()" style="cursor:pointer;flex:1;font-size:13px"></select>
+    </div>
+    <div id="editColorCustomWrap" style="display:none;margin-bottom:4px">
+      <div style="display:flex;gap:8px">
+        <input type="text" class="modal-input" id="editColorCustomInput" placeholder="Type a color..." style="flex:1;margin:0">
+        <button class="tag-add-btn" onclick="addCustomColor()">+</button>
+      </div>
+    </div>
 
     <span class="edit-label">Description</span>
-    <input type="text" class="modal-input" id="editDescInput" placeholder="e.g. linen button-up shirt">
+    <input type="text" class="modal-input" id="editDescInput" placeholder="e.g. silk saree with gold zari border">
 
     <span class="edit-label">Custom Tags</span>
     <div class="tag-input-row">
@@ -674,9 +689,69 @@ let editingItemId  = null;
 let editTagsList   = [];
 let apiKey = '';
 
-const CATEGORIES = ['tops','bottoms','dresses','outerwear','shoes','accessories','outfits','other'];
-const STYLES     = ['casual','formal','smart-casual','sporty','elegant','streetwear','boho','other'];
-const EMOJIS     = ['✨','🎀','👒','🌸','🌊','🔥','🍂','🌈','💎','🎭','🏝️','❄️','🌙','🎊','🌺','🦋'];
+const CATEGORIES = [
+  // Western Tops
+  'T-Shirt','Shirt','Blouse','Crop Top','Tank Top','Polo','Sweater','Hoodie','Sweatshirt','Camisole','Tube Top',
+  // Western Bottoms
+  'Jeans','Trousers','Chinos','Shorts','Skirt','Mini Skirt','Midi Skirt','Maxi Skirt','Leggings','Joggers','Cargo Pants',
+  // Dresses
+  'Casual Dress','Formal Dress','Maxi Dress','Mini Dress','Midi Dress','Wrap Dress','Shirt Dress','Bodycon Dress','Sundress',
+  // Ethnic / South Asian
+  'Saree','Lehenga','Kurta','Kurti','Salwar Kameez','Anarkali','Sharara','Palazzo Suit','Dupatta','Blouse (Saree)',
+  // Ethnic / Other
+  'Abaya','Kaftan','Kimono','Hanbok','Cheongsam','Dashiki','Jalabiya',
+  // Outerwear
+  'Jacket','Blazer','Coat','Trench Coat','Denim Jacket','Leather Jacket','Cardigan','Shawl','Poncho','Windbreaker',
+  // Footwear
+  'Sneakers','Heels','Flats','Sandals','Boots','Ankle Boots','Loafers','Slippers','Wedges','Kolhapuri','Juttis',
+  // Accessories
+  'Bag','Handbag','Clutch','Jewellery','Necklace','Earrings','Bangles','Watch','Belt','Scarf','Hat','Sunglasses','Dupatta',
+  // Special
+  'Full Outfit','Swimwear','Activewear','Nightwear','Lingerie',
+  'Other'
+];
+
+const STYLES = [
+  // Everyday
+  'Casual','Smart Casual','Formal','Semi-Formal','Business Professional',
+  // Fashion
+  'Minimalist','Maximalist','Classic','Preppy','Vintage','Retro','Grunge','Gothic',
+  // Street & Youth
+  'Streetwear','Athleisure','Sporty','Y2K','Cottagecore','Dark Academia','Light Academia',
+  // Elegant
+  'Elegant','Romantic','Bohemian','Chic','Glamorous','Editorial',
+  // Cultural
+  'Indian Traditional','Indo-Western','Fusion','Ethnic Chic','Festive Indian','Bridal','Modest','Andean','Afrocentric',
+  // Occasion
+  'Party','Cocktail','Beach & Resort','Loungewear','Workwear',
+  'Other'
+];
+
+const COLORS = [
+  // Neutrals
+  'White','Off-White','Ivory','Cream','Beige','Nude','Taupe','Light Grey','Grey','Charcoal','Black',
+  // Browns
+  'Tan','Camel','Khaki','Brown','Dark Brown','Chocolate',
+  // Reds & Pinks
+  'Light Pink','Baby Pink','Dusty Rose','Hot Pink','Fuchsia','Magenta','Rose','Red','Crimson','Burgundy','Maroon','Wine',
+  // Oranges & Yellows
+  'Peach','Coral','Salmon','Orange','Burnt Orange','Amber','Yellow','Mustard','Gold','Lemon Yellow',
+  // Greens
+  'Mint','Sage','Olive','Lime','Green','Emerald','Forest Green','Teal','Turquoise','Jade',
+  // Blues
+  'Baby Blue','Sky Blue','Powder Blue','Cornflower Blue','Blue','Royal Blue','Navy','Indigo','Denim Blue',
+  // Purples
+  'Lavender','Lilac','Mauve','Purple','Violet','Plum','Eggplant',
+  // Metallic & Special
+  'Silver','Gold','Bronze','Rose Gold','Copper',
+  // Prints & Patterns
+  'Multicolour','Printed','Floral Print','Geometric Print','Animal Print','Striped','Checked','Polka Dot','Tie-Dye','Embroidered',
+  'Other'
+];
+
+// Persona for consistent AI image generation
+const PERSONA = 'an Indian woman with fair complexion, medium-length dark hair, slim build, age 25-30';
+const EMOJIS  = ['✨','🎀','👒','🌸','🌊','🔥','🍂','🌈','💎','🎭','🏝️','❄️','🌙','🎊','🌺','🦋'];
 
 // ══════════════════════════════════════════════
 //  INIT
@@ -691,8 +766,6 @@ window.addEventListener('DOMContentLoaded', () => {
   renderOccasionGrid();
   renderVibeChips();
   buildEmojiPicker();
-  buildCategoryGrid();
-  buildStyleGrid();
 });
 
 // ══════════════════════════════════════════════
@@ -789,24 +862,24 @@ function readAsDataUrl(file) {
 //  OPENROUTER AI — CLOTHING ANALYSIS (vision)
 // ══════════════════════════════════════════════
 async function analyzeWithGemini(dataUrl) {
-  const prompt = `You are a fashion AI. Analyze this image carefully.
+  const prompt = `You are a fashion AI with expertise in both Western and ethnic/cultural clothing. Analyze this image carefully.
 
 Determine if this shows:
 (A) A single clothing item / accessory
 (B) A person wearing a complete outfit
 
-Respond ONLY in valid JSON (no markdown, no backticks) with these fields:
-- isOutfit: boolean (true if person is wearing clothes, false if just an item)
-- category: one of ["tops","bottoms","dresses","outerwear","shoes","accessories","outfits","other"]
-  (use "outfits" if isOutfit is true)
-- description: concise 3-6 word label (e.g. "white linen button-up shirt" or "casual summer beach outfit")
-- color: main color(s) as a short string (e.g. "navy blue and white")
-- style: one of ["casual","formal","smart-casual","sporty","elegant","streetwear","boho","other"]
-- tags: array of 2-4 descriptive tags (e.g. ["summer","lightweight","cotton","relaxed fit"])
-- outfitItems: if isOutfit is true, list the visible clothing items as strings; else empty array
+Respond ONLY in valid JSON (no markdown, no backticks) with these exact fields:
+- isOutfit: boolean
+- category: pick the MOST SPECIFIC match from this list: ["T-Shirt","Shirt","Blouse","Crop Top","Tank Top","Polo","Sweater","Hoodie","Sweatshirt","Camisole","Jeans","Trousers","Chinos","Shorts","Skirt","Mini Skirt","Midi Skirt","Maxi Skirt","Leggings","Joggers","Cargo Pants","Casual Dress","Formal Dress","Maxi Dress","Mini Dress","Midi Dress","Wrap Dress","Bodycon Dress","Sundress","Saree","Lehenga","Kurta","Kurti","Salwar Kameez","Anarkali","Sharara","Palazzo Suit","Dupatta","Blouse (Saree)","Abaya","Kaftan","Kimono","Jacket","Blazer","Coat","Trench Coat","Denim Jacket","Leather Jacket","Cardigan","Shawl","Sneakers","Heels","Flats","Sandals","Boots","Kolhapuri","Juttis","Bag","Handbag","Clutch","Jewellery","Necklace","Earrings","Bangles","Watch","Belt","Scarf","Hat","Full Outfit","Activewear","Swimwear","Other"]
+- description: specific 4-8 word label mentioning fabric/print/color (e.g. "red silk saree with gold zari border" or "navy blue cotton kurta with white embroidery")
+- color: primary color name (e.g. "Red", "Navy Blue")
+- colors: array of ALL colors visible (e.g. ["Red","Gold","Cream"])
+- style: pick from ["Casual","Smart Casual","Formal","Semi-Formal","Elegant","Sporty","Streetwear","Bohemian","Indian Traditional","Indo-Western","Fusion","Ethnic Chic","Festive Indian","Bridal","Minimalist","Maximalist","Athleisure","Other"]
+- tags: array of 3-5 descriptive tags (fabric, occasion, fit, pattern — e.g. ["silk","festive","traditional","handwoven"])
+- outfitItems: if isOutfit is true, list each visible garment as a string; else []
 
-Example for single item: {"isOutfit":false,"category":"tops","description":"striped navy polo shirt","color":"navy and white","style":"casual","tags":["stripes","cotton","summer","classic"],"outfitItems":[]}
-Example for outfit: {"isOutfit":true,"category":"outfits","description":"smart casual office look","color":"grey and white","style":"smart-casual","tags":["layered","professional","neutral"],"outfitItems":["white button-up shirt","grey blazer","navy chinos","white sneakers"]}`;
+Example saree: {"isOutfit":false,"category":"Saree","description":"red silk saree with gold zari border","color":"Red","colors":["Red","Gold"],"style":"Indian Traditional","tags":["silk","zari","festive","traditional","handwoven"],"outfitItems":[]}
+Example outfit: {"isOutfit":true,"category":"Full Outfit","description":"smart casual blazer and jeans look","color":"Navy Blue","colors":["Navy Blue","White"],"style":"Smart Casual","tags":["layered","office-ready","neutral"],"outfitItems":["white button-up shirt","navy blue blazer","slim-fit jeans","white sneakers"]}`;
 
   const resp = await fetch(OPENROUTER_BASE, {
     method: 'POST',
@@ -883,7 +956,7 @@ Respond ONLY in valid JSON (no markdown), with this exact structure:
       "itemIndices": [0, 2],
       "why": "One sentence why these work together",
       "tip": "One practical styling tip",
-      "imagePrompt": "Detailed fashion illustration prompt: a stylish woman wearing [describe exact clothing items with colors and fit], full body shot, fashion photography, clean white background, elegant lighting"
+      "imagePrompt": "Detailed fashion photo prompt: ${PERSONA}, wearing [describe EXACTLY the clothing items with precise colors, fabric, cut, and any patterns or embellishments visible], full body shot, standing pose, fashion editorial photography, clean white studio background, soft professional lighting, high resolution, photorealistic"
     }
   ],
   "generalTip": "One general tip for this occasion"
@@ -1007,9 +1080,13 @@ async function generateIllustration(idx, imagePrompt) {
       <div style="font-size:11px;opacity:0.6">Powered by Puter.js • 15–30 seconds</div>
     </div>`;
 
-  const fullPrompt = (imagePrompt ||
-    'A stylish woman wearing a fashionable outfit, full body shot') +
-    ', fashion editorial photography, clean white studio background, professional lighting, high quality, detailed clothing';
+  // Build a rich, specific prompt anchored to the user's persona
+  const personaBase = `A full body fashion photo of ${PERSONA}`;
+  const outfitDetail = imagePrompt
+    ? imagePrompt.replace(/a stylish woman/gi, personaBase).replace(/an indian woman[^,]*/gi, personaBase)
+    : `${personaBase}, wearing a stylish outfit`;
+
+  const fullPrompt = `${outfitDetail}. Full body standing pose. Clean white studio background. Soft professional fashion photography lighting. High resolution, photorealistic, detailed fabric textures. The woman is smiling naturally.`;
 
   try {
     // puter.ai.txt2img returns an <img> element directly
@@ -1082,46 +1159,114 @@ function filterCategory(cat, el) {
 }
 
 // ══════════════════════════════════════════════
-//  EDIT MODAL
+//  EDIT MODAL — DROPDOWNS
 // ══════════════════════════════════════════════
-function buildCategoryGrid() {
-  const grid = document.getElementById('editCategoryGrid');
-  grid.innerHTML = CATEGORIES.map(c => `
-    <div class="edit-option" data-cat="${c}" onclick="selectEditOption(this,'cat')">${c}</div>
+let editColorsList = []; // selected colors for current edit
+
+function populateCategoryDropdown(selected) {
+  const sel = document.getElementById('editCategorySelect');
+  sel.innerHTML = CATEGORIES.map(c =>
+    `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`
+  ).join('');
+  onCategoryChange();
+}
+
+function populateStyleDropdown(selected) {
+  const sel = document.getElementById('editStyleSelect');
+  sel.innerHTML = STYLES.map(s =>
+    `<option value="${s}" ${s === selected ? 'selected' : ''}>${s}</option>`
+  ).join('');
+  onStyleChange();
+}
+
+function populateColorDropdown() {
+  const sel = document.getElementById('editColorSelect');
+  sel.innerHTML = `<option value="">— Add a color —</option>` +
+    COLORS.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function onCategoryChange() {
+  const val = document.getElementById('editCategorySelect').value;
+  document.getElementById('editCategoryCustom').style.display = val === 'Other' ? 'block' : 'none';
+}
+
+function onStyleChange() {
+  const val = document.getElementById('editStyleSelect').value;
+  document.getElementById('editStyleCustom').style.display = val === 'Other' ? 'block' : 'none';
+}
+
+function addColorFromDropdown() {
+  const sel = document.getElementById('editColorSelect');
+  const val = sel.value;
+  if (!val) return;
+  if (val === 'Other') {
+    document.getElementById('editColorCustomWrap').style.display = 'block';
+    sel.value = '';
+    return;
+  }
+  if (!editColorsList.includes(val)) {
+    editColorsList.push(val);
+    renderEditColors();
+  }
+  sel.value = '';
+}
+
+function addCustomColor() {
+  const inp = document.getElementById('editColorCustomInput');
+  const val = inp.value.trim();
+  if (val && !editColorsList.includes(val)) {
+    editColorsList.push(val);
+    renderEditColors();
+  }
+  inp.value = '';
+  document.getElementById('editColorCustomWrap').style.display = 'none';
+}
+
+function removeEditColor(idx) {
+  editColorsList.splice(idx, 1);
+  renderEditColors();
+}
+
+function renderEditColors() {
+  document.getElementById('editColorsChips').innerHTML = editColorsList.map((c, i) => `
+    <div class="tag-pill" style="background:var(--surface2)">
+      ${c}
+      <button onclick="removeEditColor(${i})">×</button>
+    </div>
   `).join('');
 }
-function buildStyleGrid() {
-  const grid = document.getElementById('editStyleGrid');
-  grid.innerHTML = STYLES.map(s => `
-    <div class="edit-option" data-sty="${s}" onclick="selectEditOption(this,'sty')">${s}</div>
-  `).join('');
-}
-function selectEditOption(el, type) {
-  const parent = type === 'cat' ? document.getElementById('editCategoryGrid') : document.getElementById('editStyleGrid');
-  parent.querySelectorAll('.edit-option').forEach(e => e.classList.remove('selected'));
-  el.classList.add('selected');
-}
+
+// Kept as no-op for backward compat (called nowhere now but just in case)
+function buildCategoryGrid() {}
+function buildStyleGrid() {}
+function selectEditOption() {}
 
 function openEditModal(id) {
   const item = wardrobe.find(i => i.id === id);
   if (!item) return;
   editingItemId = id;
-  editTagsList = [...(item.tags || [])];
+  editTagsList  = [...(item.tags || [])];
+
+  // Parse existing colors (could be comma-separated string or array)
+  if (Array.isArray(item.colors)) {
+    editColorsList = [...item.colors];
+  } else if (item.color) {
+    editColorsList = item.color.split(',').map(s => s.trim()).filter(Boolean);
+  } else {
+    editColorsList = [];
+  }
 
   document.getElementById('editModalTitle').textContent = item.isOutfit ? 'Edit Outfit' : 'Edit Item';
   document.getElementById('editPreview').src = item.dataUrl;
-  document.getElementById('editColorInput').value = item.color || '';
-  document.getElementById('editDescInput').value  = item.description || '';
+  document.getElementById('editDescInput').value = item.description || '';
+  document.getElementById('editColorCustomWrap').style.display = 'none';
+  document.getElementById('editCategoryCustom').style.display  = 'none';
+  document.getElementById('editStyleCustom').style.display     = 'none';
 
-  // Select category
-  document.querySelectorAll('#editCategoryGrid .edit-option').forEach(el => {
-    el.classList.toggle('selected', el.dataset.cat === item.category);
-  });
-  // Select style
-  document.querySelectorAll('#editStyleGrid .edit-option').forEach(el => {
-    el.classList.toggle('selected', el.dataset.sty === item.style);
-  });
-
+  populateCategoryDropdown(item.category || 'Other');
+  populateStyleDropdown(item.style || 'Casual');
+  populateColorDropdown();
+  renderEditColors();
   renderEditTags();
   openModal('editModal');
 }
@@ -1137,21 +1282,36 @@ function addEditTag() {
   if (val && !editTagsList.includes(val)) { editTagsList.push(val); renderEditTags(); }
   inp.value = '';
 }
-function removeEditTag(i) { editTagsList.splice(i,1); renderEditTags(); }
+function removeEditTag(i) { editTagsList.splice(i, 1); renderEditTags(); }
 
 function saveEditedItem() {
   const idx = wardrobe.findIndex(i => i.id === editingItemId);
   if (idx === -1) return;
-  const cat = document.querySelector('#editCategoryGrid .edit-option.selected')?.dataset.cat || wardrobe[idx].category;
-  const sty = document.querySelector('#editStyleGrid .edit-option.selected')?.dataset.sty  || wardrobe[idx].style;
+
+  let cat = document.getElementById('editCategorySelect').value;
+  if (cat === 'Other') {
+    const custom = document.getElementById('editCategoryCustomInput').value.trim();
+    if (custom) cat = custom;
+  }
+
+  let sty = document.getElementById('editStyleSelect').value;
+  if (sty === 'Other') {
+    const custom = document.getElementById('editStyleCustomInput').value.trim();
+    if (custom) sty = custom;
+  }
+
+  const colorsArr = [...editColorsList];
+  const colorStr  = colorsArr.join(', ');
+
   wardrobe[idx] = {
     ...wardrobe[idx],
-    category: cat,
-    style:    sty,
-    color:    document.getElementById('editColorInput').value.trim(),
+    category:    cat,
+    style:       sty,
+    color:       colorStr,
+    colors:      colorsArr,
     description: document.getElementById('editDescInput').value.trim(),
-    tags:     [...editTagsList],
-    isOutfit: cat === 'outfits',
+    tags:        [...editTagsList],
+    isOutfit:    cat === 'Full Outfit' || cat === 'outfits',
   };
   closeModal('editModal');
   renderWardrobe(); saveWardrobe(); showToast('✓ Item updated');
