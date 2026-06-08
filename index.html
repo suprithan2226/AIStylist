@@ -311,6 +311,133 @@ body {
 
 /* ── DIVIDER ── */
 .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+/* ── OUTFIT RESULT CARDS ── */
+.outfit-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-top: 18px;
+  animation: fadeIn .4s ease;
+}
+.outfit-card-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.outfit-card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 17px; font-weight: 700; color: var(--accent);
+}
+.outfit-card-badge {
+  font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+  background: var(--surface2); color: var(--text-muted);
+  padding: 3px 8px; border-radius: 20px;
+}
+
+/* ── COLLAGE ── */
+.collage-strip {
+  display: flex; gap: 0; overflow-x: auto;
+  scrollbar-width: none; height: 140px;
+}
+.collage-strip::-webkit-scrollbar { display: none; }
+.collage-item {
+  flex: 0 0 auto;
+  position: relative;
+  height: 140px;
+}
+.collage-item img {
+  height: 140px; width: auto; min-width: 90px; max-width: 160px;
+  object-fit: cover; display: block;
+  border-right: 2px solid var(--bg);
+}
+.collage-item .collage-label {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  font-size: 9px; color: #fff; padding: 12px 6px 5px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.collage-placeholder {
+  flex: 0 0 90px; height: 140px;
+  background: var(--surface2);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 4px; color: var(--text-muted); font-size: 11px;
+  border-right: 2px solid var(--bg);
+}
+.collage-placeholder .ph-icon { font-size: 24px; }
+
+/* ── OUTFIT DESCRIPTION ── */
+.outfit-desc {
+  padding: 12px 16px;
+  font-size: 13px; line-height: 1.75; color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+.outfit-desc .items-row {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;
+}
+.outfit-item-chip {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 4px 10px;
+  font-size: 11px; color: var(--text-muted);
+}
+.outfit-why { font-size: 13px; color: var(--text); line-height: 1.6; }
+.outfit-tip {
+  margin-top: 8px; font-size: 12px; color: var(--accent);
+  display: flex; align-items: flex-start; gap: 6px;
+}
+
+/* ── GENERATE LOOK BUTTON ── */
+.gen-look-btn {
+  width: 100%; background: none;
+  border: none; border-top: 1px solid var(--border);
+  padding: 13px 16px; color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif; font-size: 13px;
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; gap: 8px; transition: all .2s;
+}
+.gen-look-btn:hover { color: var(--accent); background: #1e1c18; }
+.gen-look-btn.loading { color: var(--text-muted); cursor: default; }
+
+/* ── AI ILLUSTRATION ── */
+.illustration-box {
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--border);
+  display: none;
+}
+.illustration-box.visible { display: block; }
+.illustration-box img {
+  width: 100%; border-radius: var(--radius-sm);
+  display: block; min-height: 200px;
+  background: var(--surface2);
+  object-fit: cover;
+}
+.illustration-box .ill-caption {
+  font-size: 11px; color: var(--text-muted);
+  text-align: center; margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* ── GENERAL TIP ── */
+.general-tip {
+  background: var(--surface2); border-radius: var(--radius);
+  padding: 14px 16px; margin-top: 18px;
+  font-size: 13px; line-height: 1.7; color: var(--text);
+  border-left: 3px solid var(--accent);
+}
+.general-tip-label {
+  font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 6px; display: block;
+}
+
+/* ── ERROR BOX ── */
+.error-box {
+  background: var(--surface); border: 1px solid #5a2020;
+  border-radius: var(--radius); padding: 18px;
+  margin-top: 18px; font-size: 13px; line-height: 1.7; color: #e07070;
+}
 </style>
 </head>
 <body>
@@ -400,10 +527,7 @@ body {
 
   <div class="loading-bar" id="loadingBar"><div class="loading-fill"></div></div>
 
-  <div class="result-box" id="resultBox">
-    <div class="result-header">✨ Your Style Suggestions</div>
-    <div class="result-content" id="resultContent"></div>
-  </div>
+  <div id="outfitResults"></div>
 </div>
 
 <!-- ═══ MODAL: API KEY ═══ -->
@@ -719,45 +843,50 @@ Example for outfit: {"isOutfit":true,"category":"outfits","description":"smart c
 // ══════════════════════════════════════════════
 async function generateOutfit() {
   if (!apiKey) { openModal('apiModal'); showToast('Please add your OpenRouter API key first'); return; }
-  if (wardrobe.filter(i => i.category !== 'analyzing').length < 2) {
+  const readyItems = wardrobe.filter(i => i.category !== 'analyzing');
+  if (readyItems.length < 2) {
     showToast('Add at least 2 items to your wardrobe first'); switchTab('wardrobe'); return;
   }
 
   const btn = document.getElementById('generateBtn');
   btn.disabled = true; btn.textContent = '⏳ Styling...';
   document.getElementById('loadingBar').classList.add('visible');
-  document.getElementById('resultBox').classList.remove('visible');
+  document.getElementById('outfitResults').innerHTML = '';
 
   const weather = document.querySelector('#weatherChips .chip.selected')?.textContent || 'Mild';
   const vibes   = [...document.querySelectorAll('#vibeChips .chip.selected')].map(c => c.dataset.vibe).join(', ') || 'Any';
   const notes   = document.getElementById('notesInput').value;
 
-  const wardrobeDesc = wardrobe
-    .filter(i => i.category !== 'analyzing')
-    .map((item, i) => {
-      let line = `Item ${i+1}: ${item.description || 'clothing item'} | Category: ${item.category} | Color: ${item.color || '?'} | Style: ${item.style || '?'}`;
-      if (item.tags?.length) line += ` | Tags: ${item.tags.join(', ')}`;
-      if (item.isOutfit && item.outfitItems?.length) line += ` | Contains: ${item.outfitItems.join(', ')}`;
-      return line;
-    }).join('\n');
+  // Build wardrobe list with index so AI can reference them
+  const wardrobeDesc = readyItems.map((item, i) => {
+    let line = `[${i}] ${item.description || 'clothing item'} | category: ${item.category} | color: ${item.color || '?'} | style: ${item.style || '?'}`;
+    if (item.tags?.length) line += ` | tags: ${item.tags.join(', ')}`;
+    return line;
+  }).join('\n');
 
-  const prompt = `You are a professional personal fashion stylist. Based on the wardrobe below, suggest 2-3 outfit combinations for the given occasion.
+  const prompt = `You are a professional fashion stylist. Suggest 2-3 outfit combinations from the wardrobe below.
 
-WARDROBE:
+WARDROBE (use the index numbers [0],[1],... to reference items):
 ${wardrobeDesc}
 
 OCCASION: ${selectedOccasion}
 WEATHER: ${weather}
 STYLE VIBE: ${vibes}
-PERSONAL NOTES: ${notes || 'None'}
+NOTES: ${notes || 'None'}
 
-Instructions:
-- Suggest 2-3 complete outfit combinations using items from the wardrobe
-- Reference items by their description
-- For each outfit: give it a fun name, list what to wear, why it works, and 1-2 styling tips
-- End with one general styling tip for this occasion
-- Be specific, encouraging, and practical
-- If the wardrobe contains outfit photos, you may use those as inspiration or reference them`;
+Respond ONLY in valid JSON (no markdown), with this exact structure:
+{
+  "outfits": [
+    {
+      "name": "Outfit name (creative, 2-4 words)",
+      "itemIndices": [0, 2],
+      "why": "One sentence why these work together",
+      "tip": "One practical styling tip",
+      "imagePrompt": "Detailed fashion illustration prompt: a stylish woman wearing [describe exact clothing items with colors and fit], full body shot, fashion photography, clean white background, elegant lighting"
+    }
+  ],
+  "generalTip": "One general tip for this occasion"
+}`;
 
   try {
     const resp = await fetch(OPENROUTER_BASE, {
@@ -777,20 +906,126 @@ Instructions:
     });
     const data = await resp.json();
     if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-    const text = data.choices?.[0]?.message?.content || 'No suggestions available.';
-    document.getElementById('resultContent').textContent = text;
-    document.getElementById('resultBox').classList.add('visible');
+    const raw   = data.choices?.[0]?.message?.content || '{}';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const jsonMatch = clean.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('AI returned unexpected format — try again');
+    const result = JSON.parse(jsonMatch[0]);
+    renderOutfitResults(result, readyItems);
     showToast('✓ Outfit suggestions ready!');
   } catch(e) {
     const hint = e.message?.includes('provider') || e.message?.includes('model')
-      ? '\n\nTip: Open ⚙ API Key and try switching to a different model.'
-      : '\n\nCheck your OpenRouter API key in ⚙ settings.';
-    document.getElementById('resultContent').textContent = '⚠ Error: ' + e.message + hint;
-    document.getElementById('resultBox').classList.add('visible');
+      ? 'Open ⚙ API Key and try switching to a different model.'
+      : 'Check your OpenRouter API key in ⚙ settings.';
+    document.getElementById('outfitResults').innerHTML =
+      `<div class="error-box">⚠️ ${e.message}<br><br>${hint}</div>`;
   }
 
   btn.disabled = false; btn.textContent = '✨ Suggest My Outfit';
   document.getElementById('loadingBar').classList.remove('visible');
+}
+
+// ══════════════════════════════════════════════
+//  RENDER OUTFIT RESULT CARDS
+// ══════════════════════════════════════════════
+function renderOutfitResults(result, readyItems) {
+  const container = document.getElementById('outfitResults');
+  let html = '';
+
+  (result.outfits || []).forEach((outfit, idx) => {
+    const items = (outfit.itemIndices || [])
+      .map(i => readyItems[i])
+      .filter(Boolean);
+
+    // Build collage strip
+    let collageHtml = '';
+    if (items.length > 0) {
+      collageHtml = items.map(item => `
+        <div class="collage-item">
+          <img src="${item.dataUrl}" alt="${item.description || ''}">
+          <div class="collage-label">${item.description || item.category}</div>
+        </div>
+      `).join('');
+    } else {
+      collageHtml = `<div class="collage-placeholder"><span class="ph-icon">👗</span><span>No photo</span></div>`;
+    }
+
+    // Item chips
+    const chips = items.map(item =>
+      `<span class="outfit-item-chip">${item.description || item.category}</span>`
+    ).join('');
+
+    html += `
+      <div class="outfit-card">
+        <div class="outfit-card-header">
+          <div class="outfit-card-title">${outfit.name || 'Outfit ' + (idx+1)}</div>
+          <div class="outfit-card-badge">Look ${idx+1}</div>
+        </div>
+
+        <div class="collage-strip">${collageHtml}</div>
+
+        <div class="outfit-desc">
+          <div class="items-row">${chips}</div>
+          <div class="outfit-why">${outfit.why || ''}</div>
+          ${outfit.tip ? `<div class="outfit-tip">💡 ${outfit.tip}</div>` : ''}
+        </div>
+
+        <button class="gen-look-btn" id="genBtn${idx}" onclick="generateIllustration(${idx}, \`${(outfit.imagePrompt||'').replace(/`/g,"'")}\`)">
+          🎨 Generate AI Fashion Look
+        </button>
+        <div class="illustration-box" id="illBox${idx}"></div>
+      </div>`;
+  });
+
+  if (result.generalTip) {
+    html += `
+      <div class="general-tip">
+        <span class="general-tip-label">✨ Stylist's Tip</span>
+        ${result.generalTip}
+      </div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  POLLINATIONS.AI — FREE IMAGE GENERATION
+// ══════════════════════════════════════════════
+async function generateIllustration(idx, imagePrompt) {
+  const btn = document.getElementById(`genBtn${idx}`);
+  const box = document.getElementById(`illBox${idx}`);
+
+  btn.classList.add('loading');
+  btn.textContent = '⏳ Generating look...';
+  box.classList.add('visible');
+  box.innerHTML = `
+    <div style="height:220px;background:var(--surface2);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--text-muted);font-size:13px">
+      <div style="font-size:32px">🎨</div>
+      <div>Creating your fashion look...</div>
+      <div style="font-size:11px;opacity:0.6">This takes 10–20 seconds</div>
+    </div>`;
+
+  // Pollinations.ai — completely free, no API key
+  const fullPrompt = imagePrompt ||
+    'A stylish woman wearing a fashionable outfit, full body, fashion photography, white background, editorial look';
+  const encoded = encodeURIComponent(fullPrompt + ', high quality fashion photo, editorial style, clean white background');
+  const seed = Math.floor(Math.random() * 99999);
+  const imgUrl = `https://image.pollinations.ai/prompt/${encoded}?width=512&height=768&seed=${seed}&nologo=true&model=flux`;
+
+  const img = new Image();
+  img.onload = () => {
+    box.innerHTML = `
+      <img src="${imgUrl}" alt="AI generated outfit look">
+      <div class="ill-caption">✨ AI-generated fashion illustration via Pollinations.ai<br>Free • No account needed</div>`;
+    btn.textContent = '🔄 Regenerate Look';
+    btn.classList.remove('loading');
+  };
+  img.onerror = () => {
+    box.innerHTML = `<div style="padding:14px;color:#e07070;font-size:13px">⚠️ Image generation failed. Pollinations.ai may be busy — try again in a moment.</div>`;
+    btn.textContent = '🎨 Try Again';
+    btn.classList.remove('loading');
+  };
+  img.src = imgUrl;
 }
 
 // ══════════════════════════════════════════════
