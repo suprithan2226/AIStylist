@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>FITS — AI Wardrobe Stylist</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://js.puter.com/v2/"></script>
 <style>
 :root {
   --bg: #0f0e0c;
@@ -989,7 +990,8 @@ function renderOutfitResults(result, readyItems) {
 }
 
 // ══════════════════════════════════════════════
-//  POLLINATIONS.AI — FREE IMAGE GENERATION
+//  PUTER.JS — FREE AI IMAGE GENERATION
+//  No API key needed — user signs in with free Puter account
 // ══════════════════════════════════════════════
 async function generateIllustration(idx, imagePrompt) {
   const btn = document.getElementById(`genBtn${idx}`);
@@ -999,33 +1001,46 @@ async function generateIllustration(idx, imagePrompt) {
   btn.textContent = '⏳ Generating look...';
   box.classList.add('visible');
   box.innerHTML = `
-    <div style="height:220px;background:var(--surface2);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--text-muted);font-size:13px">
-      <div style="font-size:32px">🎨</div>
-      <div>Creating your fashion look...</div>
-      <div style="font-size:11px;opacity:0.6">This takes 10–20 seconds</div>
+    <div style="height:240px;background:var(--surface2);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--text-muted);font-size:13px">
+      <div style="font-size:36px;animation:pulse 1.2s infinite">🎨</div>
+      <div>Generating your fashion look...</div>
+      <div style="font-size:11px;opacity:0.6">Powered by Puter.js • 15–30 seconds</div>
     </div>`;
 
-  // Pollinations.ai — completely free, no API key
-  const fullPrompt = imagePrompt ||
-    'A stylish woman wearing a fashionable outfit, full body, fashion photography, white background, editorial look';
-  const encoded = encodeURIComponent(fullPrompt + ', high quality fashion photo, editorial style, clean white background');
-  const seed = Math.floor(Math.random() * 99999);
-  const imgUrl = `https://image.pollinations.ai/prompt/${encoded}?width=512&height=768&seed=${seed}&nologo=true&model=flux`;
+  const fullPrompt = (imagePrompt ||
+    'A stylish woman wearing a fashionable outfit, full body shot') +
+    ', fashion editorial photography, clean white studio background, professional lighting, high quality, detailed clothing';
 
-  const img = new Image();
-  img.onload = () => {
-    box.innerHTML = `
-      <img src="${imgUrl}" alt="AI generated outfit look">
-      <div class="ill-caption">✨ AI-generated fashion illustration via Pollinations.ai<br>Free • No account needed</div>`;
+  try {
+    // puter.ai.txt2img returns an <img> element directly
+    const imgEl = await puter.ai.txt2img(fullPrompt, {
+      model: 'google/imagen-4.0-fast',
+    });
+    imgEl.style.cssText = 'width:100%;border-radius:10px;display:block;';
+
+    box.innerHTML = '';
+    box.appendChild(imgEl);
+
+    const caption = document.createElement('div');
+    caption.className = 'ill-caption';
+    caption.textContent = '✨ AI-generated fashion look via Puter.js (Imagen 4) • Free';
+    box.appendChild(caption);
+
     btn.textContent = '🔄 Regenerate Look';
     btn.classList.remove('loading');
-  };
-  img.onerror = () => {
-    box.innerHTML = `<div style="padding:14px;color:#e07070;font-size:13px">⚠️ Image generation failed. Pollinations.ai may be busy — try again in a moment.</div>`;
+  } catch(e) {
+    // If user not signed into Puter, it prompts them automatically
+    // But catch other errors
+    box.innerHTML = `
+      <div style="padding:16px;font-size:13px;line-height:1.7;color:#e07070">
+        ⚠️ ${e.message || 'Image generation failed'}<br><br>
+        <span style="color:var(--text-muted)">Make sure you're signed into your free 
+        <a href="https://puter.com" target="_blank" style="color:var(--accent)">Puter account</a>. 
+        It's free — no credit card needed.</span>
+      </div>`;
     btn.textContent = '🎨 Try Again';
     btn.classList.remove('loading');
-  };
-  img.src = imgUrl;
+  }
 }
 
 // ══════════════════════════════════════════════
