@@ -541,12 +541,11 @@ body {
 
     <span class="edit-label" style="margin-top:0">AI Model for image analysis</span>
     <select class="modal-input" id="modelSelect" style="margin-bottom:8px;cursor:pointer">
-      <option value="openrouter/free">Auto — Best Available Free Model ⭐</option>
-      <option value="meta-llama/llama-4-maverick:free">Llama 4 Maverick (Free ✓, vision)</option>
-      <option value="meta-llama/llama-4-scout:free">Llama 4 Scout (Free ✓, fast)</option>
-      <option value="google/gemma-4-31b-it:free">Gemma 4 31B (Free ✓, vision)</option>
+      <option value="meta-llama/llama-4-maverick:free">Llama 4 Maverick Vision (Free ⭐ Recommended)</option>
       <option value="qwen/qwen2.5-vl-72b-instruct:free">Qwen 2.5 VL 72B (Free ✓, vision)</option>
-      <option value="google/gemini-flash-1.5">Gemini Flash 1.5 (paid, reliable)</option>
+      <option value="google/gemma-4-31b-it:free">Gemma 4 31B (Free ✓, vision)</option>
+      <option value="openrouter/free">Auto — Best Available Free Model</option>
+      <option value="google/gemini-flash-1.5">Gemini Flash 1.5 (paid, most reliable)</option>
     </select>
 
     <span class="edit-label">Text model for outfit suggestions</span>
@@ -662,7 +661,7 @@ const VISION_MODEL_KEY = 'fits_vision_model';
 const TEXT_MODEL_KEY   = 'fits_text_model';
 
 const OPENROUTER_BASE  = 'https://openrouter.ai/api/v1/chat/completions';
-const DEFAULT_VISION   = 'openrouter/free';
+const DEFAULT_VISION   = 'meta-llama/llama-4-maverick:free';
 const DEFAULT_TEXT     = 'openrouter/free';
 
 let visionModel = '';
@@ -901,9 +900,10 @@ async function handleFiles(files) {
 
     if (apiKey) {
       try {
-        // 30-second timeout — if AI doesn't respond, fall back gracefully
+        // Compress image for AI — much faster, same accuracy
+        const compressed = await compressForAI(dataUrl);
         const result = await Promise.race([
-          analyzeWithGemini(dataUrl),
+          analyzeWithGemini(compressed),
           new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 30000))
         ]);
         const idx = wardrobe.findIndex(w => w.id === tempId);
@@ -941,28 +941,51 @@ function readAsDataUrl(file) {
   });
 }
 
+// Compress image for AI analysis — keeps display quality but shrinks AI payload
+function compressForAI(dataUrl, maxSize = 800, quality = 0.7) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let { width, height } = img;
+      // Scale down if larger than maxSize
+      if (width > maxSize || height > maxSize) {
+        if (width > height) { height = Math.round(height * maxSize / width); width = maxSize; }
+        else { width = Math.round(width * maxSize / height); height = maxSize; }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataUrl); // fallback: use original
+    img.src = dataUrl;
+  });
+}
+
 // ══════════════════════════════════════════════
 //  OPENROUTER AI — CLOTHING ANALYSIS (vision)
 // ══════════════════════════════════════════════
 async function analyzeWithGemini(dataUrl) {
-  const prompt = `You are a fashion AI with expertise in both Western and ethnic/cultural clothing. Analyze this image carefully.
+  const prompt = `You are a fashion AI with expertise in both Western and ethnic/cultural clothing. Analyze this clothing image.
 
-Determine if this shows:
-(A) A single clothing item / accessory
-(B) A person wearing a complete outfit
+Is this (A) a single clothing item/accessory, or (B) a person wearing a complete outfit?
 
-Respond ONLY in valid JSON (no markdown, no backticks) with these exact fields:
-- isOutfit: boolean
-- category: pick the MOST SPECIFIC match from this list: ["T-Shirt","Shirt","Blouse","Crop Top","Tank Top","Polo","Sweater","Hoodie","Sweatshirt","Camisole","Jeans","Trousers","Chinos","Shorts","Skirt","Mini Skirt","Midi Skirt","Maxi Skirt","Leggings","Joggers","Cargo Pants","Casual Dress","Formal Dress","Maxi Dress","Mini Dress","Midi Dress","Wrap Dress","Bodycon Dress","Sundress","Saree","Lehenga","Kurta","Kurti","Salwar Kameez","Anarkali","Sharara","Palazzo Suit","Dupatta","Blouse (Saree)","Abaya","Kaftan","Kimono","Jacket","Blazer","Coat","Trench Coat","Denim Jacket","Leather Jacket","Cardigan","Shawl","Sneakers","Heels","Flats","Sandals","Boots","Kolhapuri","Juttis","Bag","Handbag","Clutch","Jewellery","Necklace","Earrings","Bangles","Watch","Belt","Scarf","Hat","Full Outfit","Activewear","Swimwear","Other"]
-- description: specific 4-8 word label mentioning fabric/print/color (e.g. "red silk saree with gold zari border" or "navy blue cotton kurta with white embroidery")
-- color: primary color name (e.g. "Red", "Navy Blue")
-- colors: array of ALL colors visible (e.g. ["Red","Gold","Cream"])
-- style: pick from ["Casual","Smart Casual","Formal","Semi-Formal","Elegant","Sporty","Streetwear","Bohemian","Indian Traditional","Indo-Western","Fusion","Ethnic Chic","Festive Indian","Bridal","Minimalist","Maximalist","Athleisure","Other"]
-- tags: array of 3-5 descriptive tags (fabric, occasion, fit, pattern — e.g. ["silk","festive","traditional","handwoven"])
-- outfitItems: if isOutfit is true, list each visible garment as a string; else []
+Return ONLY a JSON object with NO extra text, NO markdown, NO explanation. Just the raw JSON:
+{
+  "isOutfit": false,
+  "category": "Saree",
+  "description": "red silk saree with gold zari border",
+  "color": "Red",
+  "colors": ["Red", "Gold"],
+  "style": "Indian Traditional",
+  "tags": ["silk", "festive", "traditional", "zari"],
+  "outfitItems": []
+}
 
-Example saree: {"isOutfit":false,"category":"Saree","description":"red silk saree with gold zari border","color":"Red","colors":["Red","Gold"],"style":"Indian Traditional","tags":["silk","zari","festive","traditional","handwoven"],"outfitItems":[]}
-Example outfit: {"isOutfit":true,"category":"Full Outfit","description":"smart casual blazer and jeans look","color":"Navy Blue","colors":["Navy Blue","White"],"style":"Smart Casual","tags":["layered","office-ready","neutral"],"outfitItems":["white button-up shirt","navy blue blazer","slim-fit jeans","white sneakers"]}`;
+Category must be one of: T-Shirt, Shirt, Blouse, Crop Top, Tank Top, Polo, Sweater, Hoodie, Sweatshirt, Camisole, Jeans, Trousers, Chinos, Shorts, Skirt, Mini Skirt, Midi Skirt, Maxi Skirt, Leggings, Joggers, Cargo Pants, Casual Dress, Formal Dress, Maxi Dress, Mini Dress, Midi Dress, Wrap Dress, Bodycon Dress, Sundress, Saree, Lehenga, Kurta, Kurti, Salwar Kameez, Anarkali, Sharara, Palazzo Suit, Dupatta, Blouse (Saree), Abaya, Kaftan, Kimono, Jacket, Blazer, Coat, Trench Coat, Denim Jacket, Leather Jacket, Cardigan, Shawl, Sneakers, Heels, Flats, Sandals, Boots, Kolhapuri, Juttis, Bag, Handbag, Clutch, Jewellery, Necklace, Earrings, Bangles, Watch, Belt, Scarf, Hat, Full Outfit, Activewear, Swimwear, Other
+
+Style must be one of: Casual, Smart Casual, Formal, Semi-Formal, Elegant, Sporty, Streetwear, Bohemian, Indian Traditional, Indo-Western, Fusion, Ethnic Chic, Festive Indian, Bridal, Minimalist, Maximalist, Athleisure, Other`;
 
   const resp = await fetch(OPENROUTER_BASE, {
     method: 'POST',
@@ -973,7 +996,7 @@ Example outfit: {"isOutfit":true,"category":"Full Outfit","description":"smart c
       'X-Title': 'FITS AI Wardrobe'
     },
     body: JSON.stringify({
-      model: visionModel,
+      model: 'meta-llama/llama-4-maverick:free',
       messages: [{
         role: 'user',
         content: [
@@ -981,18 +1004,45 @@ Example outfit: {"isOutfit":true,"category":"Full Outfit","description":"smart c
           { type: 'text', text: prompt }
         ]
       }],
-      max_tokens: 400
+      max_tokens: 300,
+      temperature: 0.1,
+      response_format: { type: 'json_object' }
     })
   });
 
   const data = await resp.json();
   if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-  const raw   = data.choices?.[0]?.message?.content || '{}';
-  const clean = raw.replace(/```json|```/g, '').trim();
-  // Try to extract JSON even if there's surrounding text
-  const jsonMatch = clean.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('AI returned unexpected format');
-  return JSON.parse(jsonMatch[0]);
+
+  const raw = data.choices?.[0]?.message?.content || '';
+  if (!raw) throw new Error('Empty response from AI');
+
+  // Robust JSON extraction — handles any wrapping text or markdown
+  return extractJSON(raw);
+}
+
+// Extracts JSON from any string — handles markdown fences, leading text, trailing text
+function extractJSON(text) {
+  // 1. Try direct parse first
+  try { return JSON.parse(text.trim()); } catch(e) {}
+
+  // 2. Strip markdown code fences
+  const stripped = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+  try { return JSON.parse(stripped); } catch(e) {}
+
+  // 3. Extract first {...} block
+  const match = stripped.match(/\{[\s\S]*\}/);
+  if (match) {
+    try { return JSON.parse(match[0]); } catch(e) {}
+  }
+
+  // 4. Try to find JSON after any intro text like "Here is the JSON:"
+  const jsonStart = text.indexOf('{');
+  const jsonEnd   = text.lastIndexOf('}');
+  if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+    try { return JSON.parse(text.slice(jsonStart, jsonEnd + 1)); } catch(e) {}
+  }
+
+  throw new Error('Could not parse AI response as JSON');
 }
 
 // ══════════════════════════════════════════════
@@ -1063,11 +1113,8 @@ Respond ONLY in valid JSON (no markdown), with this exact structure:
     });
     const data = await resp.json();
     if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-    const raw   = data.choices?.[0]?.message?.content || '{}';
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const jsonMatch = clean.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('AI returned unexpected format — try again');
-    const result = JSON.parse(jsonMatch[0]);
+    const raw = data.choices?.[0]?.message?.content || '{}';
+    const result = extractJSON(raw);
     renderOutfitResults(result, readyItems);
     showToast('✓ Outfit suggestions ready!');
   } catch(e) {
